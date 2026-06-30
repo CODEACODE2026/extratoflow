@@ -33,6 +33,8 @@ const currentMonth = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 };
 
+const toMonthFromDay = (day: string) => day.slice(0, 7);
+
 const toDateInputValue = (date: string) => date.slice(0, 10);
 
 const formatDate = (date: string) => {
@@ -97,6 +99,16 @@ export function TransactionsPage() {
   const listedAmount = useMemo(() => {
     return transactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
   }, [transactions]);
+  const selectedPeriod = filters.dateStart && filters.dateEnd ? filters.dateStart : (filters.month ?? "Sem periodo");
+
+  const handleDayChange = (day: string) => {
+    setFilters((current) => ({
+      ...current,
+      dateEnd: day || undefined,
+      dateStart: day || undefined,
+      month: day ? toMonthFromDay(day) : current.month
+    }));
+  };
 
   const openEditModal = (transaction: Transaction) => {
     setEditingTransaction(transaction);
@@ -257,9 +269,15 @@ export function TransactionsPage() {
         <div className="transactions-filter-grid">
           <Input
             label="Mes"
-            onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))}
+            onChange={(event) => setFilters((current) => ({ ...current, dateEnd: undefined, dateStart: undefined, month: event.target.value }))}
             type="month"
             value={filters.month}
+          />
+          <Input
+            label="Dia"
+            onChange={(event) => handleDayChange(event.target.value)}
+            type="date"
+            value={filters.dateStart ?? ""}
           />
           <label className="field" htmlFor="transaction-status-filter">
             <span className="field__label">Status</span>
@@ -347,7 +365,7 @@ export function TransactionsPage() {
             <h2>Movimentacoes</h2>
             <p>Consulte, edite e lance nota individual por registro.</p>
           </div>
-          <Badge tone="neutral">{filters.month ?? "Sem mes"}</Badge>
+          <Badge tone="neutral">{selectedPeriod}</Badge>
         </header>
 
         {loading ? (

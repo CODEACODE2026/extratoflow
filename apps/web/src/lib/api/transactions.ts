@@ -23,6 +23,8 @@ export type Transaction = {
 
 export type TransactionFilters = {
   month?: string;
+  dateStart?: string;
+  dateEnd?: string;
   status?: TransactionStatus | "all";
   type?: TransactionType | "all";
   payerName?: string;
@@ -65,6 +67,14 @@ const toSearchParams = (filters: TransactionFilters) => {
 
   if (filters.month) {
     params.set("month", filters.month);
+  }
+
+  if (filters.dateStart) {
+    params.set("dateStart", filters.dateStart);
+  }
+
+  if (filters.dateEnd) {
+    params.set("dateEnd", filters.dateEnd);
   }
 
   if (filters.status && filters.status !== "all") {
