@@ -38,10 +38,11 @@ export const prepareBulkInvoice = async (invoiceNumber: string, filters: BulkInv
   });
 };
 
-export const applyBulkInvoice = async (invoiceNumber: string, transactionIds: string[]) => {
+export const applyBulkInvoice = async (invoiceNumber: string, transactionIds: string[], descriptionText?: string) => {
   return apiRequest<BulkInvoiceResult>("/invoices/bulk-apply", {
     body: {
       confirm: true,
+      ...(descriptionText?.trim() ? { descriptionText: descriptionText.trim() } : {}),
       invoiceNumber,
       transactionIds
     },

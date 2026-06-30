@@ -22,6 +22,7 @@ const formatDate = (date: string) => new Intl.DateTimeFormat("pt-BR").format(new
 
 export function InvoicesPage() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [descriptionText, setDescriptionText] = useState("");
   const [filters, setFilters] = useState<BulkInvoiceFilters>({ month: currentMonth(), type: "" });
   const [preview, setPreview] = useState<BulkInvoicePreview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -68,9 +69,10 @@ export function InvoicesPage() {
     try {
       const result = await applyBulkInvoice(
         invoiceNumber.trim(),
-        preview.transactions.map((transaction) => transaction.id)
+        preview.transactions.map((transaction) => transaction.id),
+        descriptionText
       );
-      setSuccess(`${result.affectedCount} movimentacoes atualizadas para transmitidas.`);
+      setSuccess(`${result.affectedCount} movimentacoes atualizadas.`);
       setPreview(null);
     } catch (applyError) {
       setError(applyError instanceof ApiError ? applyError.message : "Nao foi possivel aplicar a nota em massa.");
@@ -101,6 +103,20 @@ export function InvoicesPage() {
       render: (row: Transaction) => <Badge tone={row.type}>{row.type === "entry" ? "Entrada" : "Saida"}</Badge>
     },
     {
+      key: "invoice",
+      header: "Nota atual",
+      render: (row: Transaction) => row.invoiceNumber ?? "-"
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (row: Transaction) => (
+        <Badge tone={row.status === "pending" ? "pending" : "transmitted"}>
+          {row.status === "pending" ? "Pendente" : "Transmitida"}
+        </Badge>
+      )
+    },
+    {
       align: "right" as const,
       key: "amount",
       header: "Valor",
@@ -114,7 +130,7 @@ export function InvoicesPage() {
         <div className="invoice-form__header">
           <div>
             <h2>Lancamento mensal</h2>
-            <p>Gere uma previa com os filtros do periodo e informe a nota antes de confirmar.</p>
+            <p>Gere uma previa e aplique nota/descricao nos registros do periodo, mesmo se ja estiverem transmitidos.</p>
           </div>
           <Button leadingIcon={<FileText size={16} />} loading={loading} type="submit">
             Gerar previa
@@ -123,6 +139,7 @@ export function InvoicesPage() {
         <div className="invoice-filter-grid">
           <Input label="Mes" onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))} type="month" value={filters.month} />
           <Input label="Numero da nota" onChange={(event) => setInvoiceNumber(event.target.value)} placeholder="Obrigatorio para confirmar" value={invoiceNumber} />
+          <Input label="Descricao para salvar" onChange={(event) => setDescriptionText(event.target.value)} placeholder="Opcional" value={descriptionText} />
           <label className="field" htmlFor="bulk-type">
             <span className="field__label">Tipo</span>
             <select className="field__control" id="bulk-type" onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value as TransactionType | "" }))} value={filters.type}>
@@ -173,13 +190,13 @@ export function InvoicesPage() {
             <header className="panel__header">
               <div>
                 <h2>Previa de lancamento mensal</h2>
-                <p>Somente movimentacoes pendentes serao atualizadas para transmitidas.</p>
+                <p>Registros pendentes ou transmitidos serao atualizados com a nota e descricao informadas.</p>
               </div>
               <Badge tone="pending">{filters.month}</Badge>
             </header>
             <DataTable
               columns={columns}
-              emptyDescription="Ajuste os filtros para localizar movimentacoes pendentes."
+              emptyDescription="Ajuste os filtros para localizar movimentacoes do periodo."
               emptyTitle="Nenhum registro na previa"
               getRowKey={(row) => row.id}
               rows={preview.transactions}

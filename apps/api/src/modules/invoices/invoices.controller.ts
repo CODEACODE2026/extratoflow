@@ -51,8 +51,9 @@ export const prepareBulkInvoiceController: RequestHandler = async (request, resp
 export const applyBulkInvoiceController: RequestHandler = async (request, response, next) => {
   try {
     const currentUser = response.locals.currentUser as AuthenticatedUser;
-    const { invoiceNumber, confirm, transactionIds, filters } = request.body as {
+    const { invoiceNumber, descriptionText, confirm, transactionIds, filters } = request.body as {
       invoiceNumber?: string;
+      descriptionText?: string;
       confirm?: boolean;
       transactionIds?: string[];
       filters?: {
@@ -67,6 +68,7 @@ export const applyBulkInvoiceController: RequestHandler = async (request, respon
       await applyBulkInvoice({
         userId: currentUser.id,
         invoiceNumber: invoiceNumber ?? "",
+        descriptionText,
         confirm: confirm === true,
         transactionIds,
         filters

@@ -19,6 +19,7 @@ type PrepareBulkInvoiceInput = {
 type ApplyBulkInvoiceInput = {
   userId: string;
   invoiceNumber: string;
+  descriptionText?: string;
   confirm: boolean;
   transactionIds?: string[];
   filters?: BulkInvoiceFilters;
@@ -59,14 +60,22 @@ const parseType = (type: string | undefined) => {
   return type as TransactionType;
 };
 
+const normalizeOptionalText = (value: string | null | undefined) => {
+  if (value === null) {
+    return null;
+  }
+
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+};
+
 const buildBulkWhere = (filters: BulkInvoiceFilters = {}): Prisma.TransactionWhereInput => {
   const { start, end } = parseMonthRange(filters.month);
   const where: Prisma.TransactionWhereInput = {
     paymentDate: {
       gte: start,
       lt: end
-    },
-    status: TransactionStatus.pending
+    }
   };
 
   const type = parseType(filters.type);
@@ -151,8 +160,9 @@ export const prepareBulkInvoice = async ({ invoiceNumber, filters }: PrepareBulk
   };
 };
 
-export const applyBulkInvoice = async ({ userId, invoiceNumber, confirm, transactionIds, filters }: ApplyBulkInvoiceInput) => {
+export const applyBulkInvoice = async ({ userId, invoiceNumber, descriptionText, confirm, transactionIds, filters }: ApplyBulkInvoiceInput) => {
   const normalizedInvoiceNumber = normalizeRequiredInvoiceNumber(invoiceNumber);
+  const normalizedDescriptionText = normalizeOptionalText(descriptionText);
 
   if (!confirm) {
     throw new AppError("Bulk invoice application requires confirmation.", 400, "BULK_INVOICE_CONFIRMATION_REQUIRED");
@@ -163,8 +173,7 @@ export const applyBulkInvoice = async ({ userId, invoiceNumber, confirm, transac
       ? {
           id: {
             in: transactionIds
-          },
-          status: TransactionStatus.pending
+          }
         }
       : buildBulkWhere(filters);
 
@@ -173,7 +182,7 @@ export const applyBulkInvoice = async ({ userId, invoiceNumber, confirm, transac
   });
 
   if (transactions.length === 0) {
-    throw new AppError("No pending transactions found for bulk invoice.", 404, "NO_PENDING_TRANSACTIONS_FOUND");
+    throw new AppError("No transactions found for bulk invoice.", 404, "NO_TRANSACTIONS_FOUND");
   }
 
   await prisma.$transaction(async (transactionClient) => {
@@ -185,6 +194,7 @@ export const applyBulkInvoice = async ({ userId, invoiceNumber, confirm, transac
       },
       data: {
         invoiceNumber: normalizedInvoiceNumber,
+        ...(normalizedDescriptionText ? { descriptionText: normalizedDescriptionText } : {}),
         status: TransactionStatus.transmitted
       }
     });
@@ -197,6 +207,7 @@ export const applyBulkInvoice = async ({ userId, invoiceNumber, confirm, transac
         action: "apply_bulk_invoice_number",
         summary: {
           invoiceNumber: normalizedInvoiceNumber,
+          descriptionText: normalizedDescriptionText,
           affectedCount: transactions.length,
           transactionIds: transactions.map((transaction) => transaction.id)
         }
