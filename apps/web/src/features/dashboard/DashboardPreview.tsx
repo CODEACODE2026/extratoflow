@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, RefreshCw, Upload } from "lucide-react";
 
 import { Badge } from "../../components/ui/Badge";
@@ -44,8 +44,26 @@ const getTotalCount = (summary: DashboardSummary | null) => {
 const getMaxMonthlyAmount = (months: MonthlyIndicator[]) => {
   return Math.max(
     1,
-    ...months.map((month) => Math.max(Number(month.totals.entry), Number(month.totals.exit), Number(month.totals.pending)))
+    ...months.map((month) =>
+      Math.max(Number(month.totals.entry), Number(month.totals.exit), Math.abs(Number(month.totals.balance)))
+    )
   );
+};
+
+const buildBalancePath = (months: MonthlyIndicator[], maxAmount: number) => {
+  if (months.length === 0) {
+    return "";
+  }
+
+  const points = months.map((month, index) => {
+    const x = months.length === 1 ? 50 : (index / (months.length - 1)) * 100;
+    const balance = Number(month.totals.balance);
+    const y = 50 - (Math.max(-maxAmount, Math.min(maxAmount, balance)) / maxAmount) * 34;
+
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  });
+
+  return `M ${points.join(" L ")}`;
 };
 
 export function DashboardPreview() {
@@ -57,6 +75,7 @@ export function DashboardPreview() {
   const selectedYear = selectedMonth.slice(0, 4);
   const totalCount = getTotalCount(dashboard.summary);
   const maxMonthlyAmount = useMemo(() => getMaxMonthlyAmount(dashboard.monthly), [dashboard.monthly]);
+  const balancePath = useMemo(() => buildBalancePath(dashboard.monthly, maxMonthlyAmount), [dashboard.monthly, maxMonthlyAmount]);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -245,22 +264,43 @@ export function DashboardPreview() {
           <Badge tone="neutral">{`${dashboard.monthly.length} meses`}</Badge>
         </header>
 
-        <div className="monthly-bars" aria-label="Comparativo mensal">
-          {dashboard.monthly.map((month) => (
-            <div className="monthly-bars__row" key={month.month}>
-              <span>{month.month.slice(5)}</span>
-              <div className="monthly-bars__track">
-                <span
-                  className="monthly-bars__bar monthly-bars__bar--entry"
-                  style={{ width: `${(Number(month.totals.entry) / maxMonthlyAmount) * 100}%` }}
-                />
-                <span
-                  className="monthly-bars__bar monthly-bars__bar--exit"
-                  style={{ width: `${(Number(month.totals.exit) / maxMonthlyAmount) * 100}%` }}
-                />
-              </div>
+        <div className="dashboard-chart" aria-label="Grafico animado mensal">
+          <div className="dashboard-chart__legend">
+            <span><i className="dashboard-chart__dot dashboard-chart__dot--entry" />Entradas</span>
+            <span><i className="dashboard-chart__dot dashboard-chart__dot--exit" />Saidas</span>
+            <span><i className="dashboard-chart__dot dashboard-chart__dot--balance" />Saldo</span>
+          </div>
+
+          <div className="dashboard-chart__stage">
+            <svg className="dashboard-chart__line" preserveAspectRatio="none" viewBox="0 0 100 100" aria-hidden="true">
+              <path className="dashboard-chart__grid-line" d="M 0 50 L 100 50" />
+              {balancePath ? <path className="dashboard-chart__balance-line" d={balancePath} pathLength="1" /> : null}
+            </svg>
+
+            <div className="dashboard-chart__columns">
+              {dashboard.monthly.map((month, index) => {
+                const entryHeight = Math.max(3, (Number(month.totals.entry) / maxMonthlyAmount) * 100);
+                const exitHeight = Math.max(3, (Number(month.totals.exit) / maxMonthlyAmount) * 100);
+                const hasValue = Number(month.totals.entry) > 0 || Number(month.totals.exit) > 0 || Number(month.totals.balance) !== 0;
+
+                return (
+                  <div className="dashboard-chart__month" key={month.month} title={`${formatMonthLabel(month.month)} - entradas ${formatApiCurrency(month.totals.entry)}, saidas ${formatApiCurrency(month.totals.exit)}`}>
+                    <div className="dashboard-chart__bars">
+                      <span
+                        className="dashboard-chart__bar dashboard-chart__bar--entry"
+                        style={{ "--bar-height": `${entryHeight}%`, "--bar-delay": `${index * 70}ms` } as CSSProperties}
+                      />
+                      <span
+                        className="dashboard-chart__bar dashboard-chart__bar--exit"
+                        style={{ "--bar-height": `${exitHeight}%`, "--bar-delay": `${index * 70 + 90}ms` } as CSSProperties}
+                      />
+                    </div>
+                    <span className={hasValue ? "dashboard-chart__label is-active" : "dashboard-chart__label"}>{month.month.slice(5)}</span>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          </div>
         </div>
 
         <DataTable
