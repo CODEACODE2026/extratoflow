@@ -1,0 +1,132 @@
+.dashboard-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dashboard-toolbar .field {
+  width: min(220px, 100%);
+}
+
+.dashboard-error {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  padding: 18px;
+}
+
+.dashboard-error h2 {
+  margin: 10px 0 6px;
+}
+
+.dashboard-error p {
+  color: #7f1d1d;
+  line-height: 1.5;
+}
+
+.dashboard-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.metric-card--loading {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.dashboard-loading-table {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.skeleton-line {
+  display: block;
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+  position: relative;
+}
+
+.skeleton-line::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 72%), transparent);
+  content: "";
+  transform: translateX(-100%);
+  animation: skeleton 1.2s ease-in-out infinite;
+}
+
+.skeleton-line--short {
+  width: 42%;
+}
+
+.skeleton-line--value {
+  width: 72%;
+  height: 26px;
+}
+
+.skeleton-line--title {
+  width: 28%;
+  height: 18px;
+}
+
+.monthly-bars {
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid #dde3ea;
+  padding: 14px 16px;
+}
+
+.monthly-bars__row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.monthly-bars__track {
+  display: grid;
+  gap: 3px;
+}
+
+.monthly-bars__bar {
+  display: block;
+  min-width: 3px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.monthly-bars__bar--entry {
+  background: #0f9f6e;
+}
+
+.monthly-bars__bar--exit {
+  background: #dc2626;
+}
+
+@keyframes skeleton {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-toolbar .field {
+    width: 100%;
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+coverage/
+*.tsbuildinfo
+.DS_Store
+npm-debug.log*
+apps/api/uploads/private/*
+!apps/api/uploads/private/.gitkeep

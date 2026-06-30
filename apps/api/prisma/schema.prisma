@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  operator
+  viewer
+}
+
+enum RecordStatus {
+  active
+  inactive
+}
+
+enum SuggestedTransactionType {
+  entry
+  exit
+}
+
+enum ImportStatus {
+  processing
+  review_required
+  confirmed
+  failed
+}
+
+enum TransactionType {
+  entry
+  exit
+}
+
+enum TransactionStatus {
+  pending
+  transmitted
+}
+
+enum TransactionSource {
+  pdf_import
+  manual
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String       @db.VarChar(120)
+  email        String       @unique @db.VarChar(160)
+  passwordHash String       @map("password_hash") @db.VarChar(255)
+  role         UserRole     @default(operator)
+  status       RecordStatus @default(active)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  imports   Import[]
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+model Description {
+  id            String                    @id @default(cuid())
+  name          String                    @unique @db.VarChar(160)
+  suggestedType SuggestedTransactionType? @map("suggested_type")
+  status        RecordStatus              @default(active)
+  createdAt     DateTime                  @default(now()) @map("created_at")
+  updatedAt     DateTime                  @updatedAt @map("updated_at")
+
+  transactions Transaction[]
+
+  @@index([status])
+  @@map("descriptions")
+}
+
+model Import {
+  id                        String       @id @default(cuid())
+  fileOriginalName          String       @map("file_original_name") @db.VarChar(255)
+  fileStoragePath           String       @map("file_storage_path") @db.VarChar(500)
+  fileMimeType              String       @map("file_mime_type") @db.VarChar(120)
+  fileSize                  Int          @map("file_size")
+  status                    ImportStatus @default(processing)
+  userId                    String       @map("user_id")
+  totalLinesRead            Int          @default(0) @map("total_lines_read")
+  totalTransactionsDetected Int          @default(0) @map("total_transactions_detected")
+  totalTransactionsSaved    Int          @default(0) @map("total_transactions_saved")
+  errorMessage              String?      @map("error_message") @db.Text
+  createdAt                 DateTime     @default(now()) @map("created_at")
+  updatedAt                 DateTime     @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("imports")
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  importId        String?           @map("import_id")
+  paymentDate     DateTime          @map("payment_date") @db.Date
+  type            TransactionType
+  payerName       String?           @map("payer_name") @db.VarChar(180)
+  descriptionText String?           @map("description_text") @db.VarChar(255)
+  descriptionId   String?           @map("description_id")
+  amount          Decimal           @db.Decimal(12, 2)
+  invoiceNumber   String?           @map("invoice_number") @db.VarChar(80)
+  status          TransactionStatus @default(pending)
+  source          TransactionSource @default(pdf_import)
+  rawText         String?           @map("raw_text") @db.Text
+  dedupHash       String?           @map("dedup_hash") @db.VarChar(128)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  import      Import?      @relation(fields: [importId], references: [id])
+  description Description? @relation(fields: [descriptionId], references: [id])
+
+  @@index([importId])
+  @@index([paymentDate])
+  @@index([status])
+  @@index([type])
+  @@index([payerName])
+  @@index([descriptionId])
+  @@index([invoiceNumber])
+  @@index([dedupHash])
+  @@index([paymentDate, status, type])
+  @@map("transactions")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  entity    String   @db.VarChar(80)
+  entityId  String   @map("entity_id") @db.VarChar(120)
+  action    String   @db.VarChar(80)
+  summary   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([action])
+  @@map("audit_logs")
+}

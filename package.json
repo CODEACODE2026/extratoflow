@@ -1,0 +1,24 @@
+{
+  "name": "extratoflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema web administrativo para importacao e conciliacao de extratos bancarios em PDF.",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace @extratoflow/api",
+    "dev:web": "npm run dev --workspace @extratoflow/web",
+    "start:api": "npm run start --workspace @extratoflow/api",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "prisma:generate": "npm run prisma:generate --workspace @extratoflow/api",
+    "prisma:validate": "npm run prisma:validate --workspace @extratoflow/api",
+    "prisma:seed": "npm run prisma:seed --workspace @extratoflow/api",
+    "test:parser": "npm run test:parser --workspace @extratoflow/api"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
