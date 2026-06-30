@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { DataTable } from "../../components/ui/DataTable";
 import { Input } from "../../components/ui/Input";
 import { Toast } from "../../components/ui/Toast";
+import { ApiError } from "../../lib/api/client";
 import { applyBulkInvoice, prepareBulkInvoice, type BulkInvoiceFilters, type BulkInvoicePreview } from "../../lib/api/invoices";
 import type { Transaction, TransactionType } from "../../lib/api/transactions";
 import { formatCurrency } from "../../lib/formatters/currency";
@@ -31,11 +32,6 @@ export function InvoicesPage() {
   const handlePrepare = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!invoiceNumber.trim()) {
-      setError("Informe o numero da nota.");
-      return;
-    }
-
     if (!filters.month) {
       setError("Selecione o mes.");
       return;
@@ -47,8 +43,8 @@ export function InvoicesPage() {
 
     try {
       setPreview(await prepareBulkInvoice(invoiceNumber.trim(), filters));
-    } catch {
-      setError("Nao foi possivel gerar a previa. Verifique filtros, permissao e banco de dados.");
+    } catch (prepareError) {
+      setError(prepareError instanceof ApiError ? prepareError.message : "Nao foi possivel gerar a previa. Verifique filtros, permissao e banco de dados.");
       setPreview(null);
     } finally {
       setLoading(false);
@@ -61,18 +57,23 @@ export function InvoicesPage() {
       return;
     }
 
+    if (!invoiceNumber.trim()) {
+      setError("Informe o numero da nota para confirmar a aplicacao.");
+      return;
+    }
+
     setApplying(true);
     setError(null);
 
     try {
       const result = await applyBulkInvoice(
-        preview.invoiceNumber,
+        invoiceNumber.trim(),
         preview.transactions.map((transaction) => transaction.id)
       );
       setSuccess(`${result.affectedCount} movimentacoes atualizadas para transmitidas.`);
       setPreview(null);
-    } catch {
-      setError("Nao foi possivel aplicar a nota em massa.");
+    } catch (applyError) {
+      setError(applyError instanceof ApiError ? applyError.message : "Nao foi possivel aplicar a nota em massa.");
     } finally {
       setApplying(false);
     }
@@ -110,27 +111,35 @@ export function InvoicesPage() {
   return (
     <>
       <form className="invoice-form" onSubmit={handlePrepare}>
-        <Input label="Mes" onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))} type="month" value={filters.month} />
-        <Input label="Numero da nota" onChange={(event) => setInvoiceNumber(event.target.value)} placeholder="Ex: 12345" value={invoiceNumber} />
-        <label className="field" htmlFor="bulk-type">
-          <span className="field__label">Tipo</span>
-          <select className="field__control" id="bulk-type" onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value as TransactionType | "" }))} value={filters.type}>
-            <option value="">Todos</option>
-            <option value="entry">Entrada</option>
-            <option value="exit">Saida</option>
-          </select>
-        </label>
-        <div className="invoice-search">
-          <Search aria-hidden="true" size={16} />
-          <input aria-label="Filtrar pagador" onChange={(event) => setFilters((current) => ({ ...current, payerName: event.target.value }))} placeholder="Pagador" value={filters.payerName ?? ""} />
+        <div className="invoice-form__header">
+          <div>
+            <h2>Lancamento mensal</h2>
+            <p>Gere uma previa com os filtros do periodo e informe a nota antes de confirmar.</p>
+          </div>
+          <Button leadingIcon={<FileText size={16} />} loading={loading} type="submit">
+            Gerar previa
+          </Button>
         </div>
-        <div className="invoice-search">
-          <Search aria-hidden="true" size={16} />
-          <input aria-label="Filtrar descricao" onChange={(event) => setFilters((current) => ({ ...current, description: event.target.value }))} placeholder="Descricao" value={filters.description ?? ""} />
+        <div className="invoice-filter-grid">
+          <Input label="Mes" onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))} type="month" value={filters.month} />
+          <Input label="Numero da nota" onChange={(event) => setInvoiceNumber(event.target.value)} placeholder="Obrigatorio para confirmar" value={invoiceNumber} />
+          <label className="field" htmlFor="bulk-type">
+            <span className="field__label">Tipo</span>
+            <select className="field__control" id="bulk-type" onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value as TransactionType | "" }))} value={filters.type}>
+              <option value="">Todos</option>
+              <option value="entry">Entrada</option>
+              <option value="exit">Saida</option>
+            </select>
+          </label>
+          <div className="invoice-search">
+            <Search aria-hidden="true" size={16} />
+            <input aria-label="Filtrar pagador" onChange={(event) => setFilters((current) => ({ ...current, payerName: event.target.value }))} placeholder="Pagador" value={filters.payerName ?? ""} />
+          </div>
+          <div className="invoice-search">
+            <Search aria-hidden="true" size={16} />
+            <input aria-label="Filtrar descricao" onChange={(event) => setFilters((current) => ({ ...current, description: event.target.value }))} placeholder="Descricao" value={filters.description ?? ""} />
+          </div>
         </div>
-        <Button leadingIcon={<FileText size={16} />} loading={loading} type="submit">
-          Gerar previa
-        </Button>
       </form>
 
       {error ? (
@@ -145,7 +154,7 @@ export function InvoicesPage() {
           <section className="invoice-preview-summary" aria-label="Resumo da previa">
             <article>
               <span>Nota</span>
-              <strong>{preview.invoiceNumber}</strong>
+              <strong>{invoiceNumber.trim() || "Nao informada"}</strong>
             </article>
             <article>
               <span>Registros afetados</span>
@@ -181,7 +190,7 @@ export function InvoicesPage() {
         <section className="panel">
           <div className="empty-state">
             <strong>Nenhuma previa gerada</strong>
-            <p>Informe o mes, o numero da nota e gere a previa antes de confirmar.</p>
+            <p>Informe o mes e gere a previa. O numero da nota so e obrigatorio para confirmar.</p>
           </div>
         </section>
       )}

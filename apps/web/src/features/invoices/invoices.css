@@ -1,9 +1,36 @@
 .invoice-form {
   display: grid;
-  grid-template-columns: 160px 180px 150px minmax(160px, 1fr) minmax(160px, 1fr) auto;
+  gap: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #dde3ea;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+}
+
+.invoice-form__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.invoice-form__header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.invoice-form__header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.invoice-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(180px, 1fr) minmax(140px, 0.7fr) minmax(190px, 1fr) minmax(190px, 1fr);
   align-items: end;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 14px;
 }
 
 .invoice-search {
@@ -66,7 +93,7 @@
 }
 
 @media (max-width: 1100px) {
-  .invoice-form {
+  .invoice-filter-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -76,7 +103,15 @@
 }
 
 @media (max-width: 720px) {
-  .invoice-form,
+  .invoice-form__header {
+    display: grid;
+  }
+
+  .invoice-form__header .button {
+    width: 100%;
+  }
+
+  .invoice-filter-grid,
   .invoice-preview-summary {
     grid-template-columns: 1fr;
   }

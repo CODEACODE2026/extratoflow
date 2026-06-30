@@ -136,7 +136,7 @@ export const applyInvoiceToTransaction = async (transactionId: string, invoiceNu
 };
 
 export const prepareBulkInvoice = async ({ invoiceNumber, filters }: PrepareBulkInvoiceInput) => {
-  const normalizedInvoiceNumber = normalizeRequiredInvoiceNumber(invoiceNumber);
+  const normalizedInvoiceNumber = invoiceNumber.trim();
   const where = buildBulkWhere(filters);
   const transactions = await prisma.transaction.findMany({
     where,
