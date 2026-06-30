@@ -91,6 +91,7 @@ export function ImportsPage() {
   const activeRows = reviewRows.filter((row) => !row.discarded);
   const discardedRows = reviewRows.length - activeRows.length;
   const invalidActiveRows = activeRows.filter((row) => !isValidAmount(row.amount));
+  const activeMonths = Array.from(new Set(activeRows.map((row) => row.paymentDate.slice(0, 7))));
   const activeTotal = useMemo(() => activeRows.reduce((sum, row) => sum + Number(row.amount), 0), [activeRows]);
 
   const loadRecentImports = async () => {
@@ -167,6 +168,11 @@ export function ImportsPage() {
 
     if (invalidActiveRows.length > 0) {
       setError("Corrija ou descarte as movimentacoes com valor zerado antes de confirmar.");
+      return;
+    }
+
+    if (activeMonths.length > 1) {
+      setError(`Esta revisao tem meses misturados: ${activeMonths.join(", ")}. Descarte as linhas do mes errado antes de confirmar.`);
       return;
     }
 
@@ -261,10 +267,20 @@ export function ImportsPage() {
               <span>Total mantido</span>
               <strong>{formatCurrency(activeTotal)}</strong>
             </article>
+            <article>
+              <span>Mes da revisao</span>
+              <strong>{activeMonths.length === 1 ? activeMonths[0] : "Misturado"}</strong>
+            </article>
             {invalidActiveRows.length > 0 ? (
               <article>
                 <span>Com valor 0</span>
                 <strong>{invalidActiveRows.length}</strong>
+              </article>
+            ) : null}
+            {activeMonths.length > 1 ? (
+              <article>
+                <span>Meses detectados</span>
+                <strong>{activeMonths.length}</strong>
               </article>
             ) : null}
           </section>

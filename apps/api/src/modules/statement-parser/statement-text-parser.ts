@@ -12,6 +12,16 @@ const normalizeMoney = (value: string) => value.replace(/\./g, "").replace(",", 
 
 const cleanText = (value: string) => value.replace(/\s+/g, " ").trim();
 
+const hasTransactionSignal = (line: string) => {
+  return line.toUpperCase().includes(PIX_CREDIT_MARKER) || Boolean(extractMoney(line));
+};
+
+const isStatementPeriodLine = (line: string) => {
+  const dateMatches = line.match(new RegExp(DATE_BR_REGEX.source, "g")) ?? [];
+
+  return dateMatches.length > 1 && !hasTransactionSignal(line);
+};
+
 const extractMoney = (line: string) => {
   const match = line.match(MONEY_REGEX);
 
@@ -111,7 +121,7 @@ export const parseStatementText = (text: string): ParseStatementResult => {
       continue;
     }
 
-    const dateMatch = line.match(DATE_BR_REGEX);
+    const dateMatch = isStatementPeriodLine(line) ? null : line.match(DATE_BR_REGEX);
 
     if (dateMatch) {
       currentDate = toIsoDate(dateMatch[1], dateMatch[2], dateMatch[3]);

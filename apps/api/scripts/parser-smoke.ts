@@ -1,6 +1,7 @@
 import { parseStatementText } from "../src/modules/statement-parser/statement-text-parser";
 
 const parsed = parseStatementText(`
+Periodo: 01/05/2026 a 31/05/2026
 29/04/2026 PIX CREDITO DE: JOAO SILVA + R$ 30,00
 29/04/2026 TARIFA BANCARIA - R$ 10,00
 Saldo do Dia R$ 20,00
@@ -10,8 +11,8 @@ R$ 1.250,99
 30/04/2026 PIX CREDITO DE: SEM VALOR
 `);
 
-if (parsed.totalLines !== 7) {
-  throw new Error(`Expected 7 lines, received ${parsed.totalLines}.`);
+if (parsed.totalLines !== 8) {
+  throw new Error(`Expected 8 lines, received ${parsed.totalLines}.`);
 }
 
 if (parsed.transactions.length !== 3) {
@@ -32,8 +33,17 @@ if (multilineEntry.type !== "entry" || multilineEntry.payerName !== "MARIA SOUZA
   throw new Error("Multiline PIX parsing failed.");
 }
 
-if (parsed.ignoredLines !== 3) {
-  throw new Error(`Expected 3 ignored lines, received ${parsed.ignoredLines}.`);
+if (parsed.ignoredLines !== 4) {
+  throw new Error(`Expected 4 ignored lines, received ${parsed.ignoredLines}.`);
+}
+
+const periodHeaderParsed = parseStatementText(`
+Periodo: 01/05/2026 a 31/05/2026
+05/06/2026 PIX CREDITO DE: CLIENTE JUNHO R$ 100,00
+`);
+
+if (periodHeaderParsed.transactions[0]?.paymentDate !== "2026-06-05") {
+  throw new Error("Statement period header changed the transaction month incorrectly.");
 }
 
 console.log("Parser smoke test passed.");
