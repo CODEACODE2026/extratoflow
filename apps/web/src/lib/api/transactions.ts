@@ -44,6 +44,13 @@ type ListTransactionsResponse = {
     perPage: number;
     total: number;
   };
+  summary: {
+    entryAmount: string;
+    exitAmount: string;
+    balanceAmount: string;
+    pendingAmount: string;
+    transmittedAmount: string;
+  };
 };
 
 type TransactionResponse = {

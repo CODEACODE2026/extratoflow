@@ -175,15 +175,37 @@ export const listTransactions = async (filters: ListTransactionsFilters) => {
   const pagination = parsePagination(filters.page, filters.perPage);
   const where = buildFilters(filters);
 
-  const [transactions, total] = await Promise.all([
+  const [transactions, total, totalsByType, totalsByStatus] = await Promise.all([
     prisma.transaction.findMany({
       where,
       orderBy: [{ paymentDate: "desc" }, { createdAt: "desc" }],
       skip: pagination.skip,
       take: pagination.perPage
     }),
-    prisma.transaction.count({ where })
+    prisma.transaction.count({ where }),
+    prisma.transaction.groupBy({
+      by: ["type"],
+      where,
+      _sum: {
+        amount: true
+      }
+    }),
+    prisma.transaction.groupBy({
+      by: ["status"],
+      where,
+      _sum: {
+        amount: true
+      }
+    })
   ]);
+  const entryAmount =
+    totalsByType.find((item) => item.type === TransactionType.entry)?._sum.amount ?? new Prisma.Decimal(0);
+  const exitAmount =
+    totalsByType.find((item) => item.type === TransactionType.exit)?._sum.amount ?? new Prisma.Decimal(0);
+  const pendingAmount =
+    totalsByStatus.find((item) => item.status === TransactionStatus.pending)?._sum.amount ?? new Prisma.Decimal(0);
+  const transmittedAmount =
+    totalsByStatus.find((item) => item.status === TransactionStatus.transmitted)?._sum.amount ?? new Prisma.Decimal(0);
 
   return {
     transactions: transactions.map(presentTransaction),
@@ -191,6 +213,13 @@ export const listTransactions = async (filters: ListTransactionsFilters) => {
       page: pagination.page,
       perPage: pagination.perPage,
       total
+    },
+    summary: {
+      entryAmount: entryAmount.toFixed(2),
+      exitAmount: exitAmount.toFixed(2),
+      balanceAmount: entryAmount.minus(exitAmount).toFixed(2),
+      pendingAmount: pendingAmount.toFixed(2),
+      transmittedAmount: transmittedAmount.toFixed(2)
     }
   };
 };

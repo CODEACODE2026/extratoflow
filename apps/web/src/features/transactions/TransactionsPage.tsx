@@ -57,6 +57,13 @@ export function TransactionsPage() {
   });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState({
+    balanceAmount: "0.00",
+    entryAmount: "0.00",
+    exitAmount: "0.00",
+    pendingAmount: "0.00",
+    transmittedAmount: "0.00"
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +82,7 @@ export function TransactionsPage() {
       const result = await listTransactions(filters);
       setTransactions(result.transactions);
       setTotal(result.pagination.total);
+      setSummary(result.summary);
     } catch {
       setError("Nao foi possivel carregar as movimentacoes. Verifique a sessao, a API e o banco de dados.");
     } finally {
@@ -86,7 +94,7 @@ export function TransactionsPage() {
     void loadTransactions();
   }, [loadTransactions]);
 
-  const totalAmount = useMemo(() => {
+  const listedAmount = useMemo(() => {
     return transactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
   }, [transactions]);
 
@@ -193,6 +201,16 @@ export function TransactionsPage() {
       render: (row: Transaction) => row.descriptionText ?? "-"
     },
     {
+      align: "right" as const,
+      key: "amount",
+      header: "Valor",
+      render: (row: Transaction) => (
+        <strong className={row.type === "entry" ? "transaction-amount transaction-amount--entry" : "transaction-amount transaction-amount--exit"}>
+          {formatCurrency(Number(row.amount))}
+        </strong>
+      )
+    },
+    {
       key: "type",
       header: "Tipo",
       render: (row: Transaction) => <Badge tone={row.type}>{row.type === "entry" ? "Entrada" : "Saida"}</Badge>
@@ -213,12 +231,6 @@ export function TransactionsPage() {
     },
     {
       align: "right" as const,
-      key: "amount",
-      header: "Valor",
-      render: (row: Transaction) => formatCurrency(Number(row.amount))
-    },
-    {
-      align: "right" as const,
       key: "actions",
       header: "",
       render: (row: Transaction) => (
@@ -233,51 +245,69 @@ export function TransactionsPage() {
   return (
     <>
       <section className="transactions-toolbar" aria-label="Filtros de movimentacoes">
-        <Input
-          label="Mes"
-          onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))}
-          type="month"
-          value={filters.month}
-        />
-        <label className="field" htmlFor="transaction-status-filter">
-          <span className="field__label">Status</span>
-          <select
-            className="field__control"
-            id="transaction-status-filter"
-            onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value as TransactionStatus | "all" }))}
-            value={filters.status}
-          >
-            <option value="all">Todos</option>
-            <option value="pending">Pendentes</option>
-            <option value="transmitted">Transmitidos</option>
-          </select>
-        </label>
-        <label className="field" htmlFor="transaction-type-filter">
-          <span className="field__label">Tipo</span>
-          <select
-            className="field__control"
-            id="transaction-type-filter"
-            onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value as TransactionType | "all" }))}
-            value={filters.type}
-          >
-            <option value="all">Todos</option>
-            <option value="entry">Entrada</option>
-            <option value="exit">Saida</option>
-          </select>
-        </label>
-        <div className="transaction-search">
-          <Search aria-hidden="true" size={16} />
-          <input
-            aria-label="Buscar pagador"
-            onChange={(event) => setFilters((current) => ({ ...current, payerName: event.target.value }))}
-            placeholder="Pagador"
-            type="search"
-            value={filters.payerName ?? ""}
-          />
+        <div className="transactions-toolbar__header">
+          <div>
+            <h2>Filtros</h2>
+            <p>Os totais abaixo consideram o periodo e todos os filtros selecionados.</p>
+          </div>
+          <Button leadingIcon={<RefreshCw size={16} />} onClick={loadTransactions} variant="secondary">
+            Atualizar
+          </Button>
         </div>
-        <Button leadingIcon={<RefreshCw size={16} />} onClick={loadTransactions} variant="secondary">
-          Atualizar
-        </Button>
+        <div className="transactions-filter-grid">
+          <Input
+            label="Mes"
+            onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))}
+            type="month"
+            value={filters.month}
+          />
+          <label className="field" htmlFor="transaction-status-filter">
+            <span className="field__label">Status</span>
+            <select
+              className="field__control"
+              id="transaction-status-filter"
+              onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value as TransactionStatus | "all" }))}
+              value={filters.status}
+            >
+              <option value="all">Todos</option>
+              <option value="pending">Pendentes</option>
+              <option value="transmitted">Transmitidos</option>
+            </select>
+          </label>
+          <label className="field" htmlFor="transaction-type-filter">
+            <span className="field__label">Tipo</span>
+            <select
+              className="field__control"
+              id="transaction-type-filter"
+              onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value as TransactionType | "all" }))}
+              value={filters.type}
+            >
+              <option value="all">Todos</option>
+              <option value="entry">Entrada</option>
+              <option value="exit">Saida</option>
+            </select>
+          </label>
+          <div className="transaction-search">
+            <Search aria-hidden="true" size={16} />
+            <input
+              aria-label="Buscar pagador"
+              onChange={(event) => setFilters((current) => ({ ...current, payerName: event.target.value }))}
+              placeholder="Pagador"
+              type="search"
+              value={filters.payerName ?? ""}
+            />
+          </div>
+          <div className="transaction-search">
+            <Search aria-hidden="true" size={16} />
+            <input
+              aria-label="Buscar descricao"
+              onChange={(event) => setFilters((current) => ({ ...current, description: event.target.value }))}
+              placeholder="Descricao"
+              type="search"
+              value={filters.description ?? ""}
+            />
+          </div>
+        </div>
       </section>
 
       {error ? (
@@ -289,8 +319,26 @@ export function TransactionsPage() {
       ) : null}
 
       <section className="transaction-summary" aria-label="Resumo dos filtros">
-        <Badge tone="neutral">{`${total} registros`}</Badge>
-        <strong>{formatCurrency(totalAmount)}</strong>
+        <div className="transaction-summary__card">
+          <span>Registros filtrados</span>
+          <strong>{total}</strong>
+          <small>{`${transactions.length} listados nesta pagina`}</small>
+        </div>
+        <div className="transaction-summary__card">
+          <span>Total de entradas</span>
+          <strong className="transaction-amount--entry">{formatCurrency(Number(summary.entryAmount))}</strong>
+          <small>Periodo + filtros atuais</small>
+        </div>
+        <div className="transaction-summary__card">
+          <span>Total de saidas</span>
+          <strong className="transaction-amount--exit">{formatCurrency(Number(summary.exitAmount))}</strong>
+          <small>Periodo + filtros atuais</small>
+        </div>
+        <div className="transaction-summary__card">
+          <span>Saldo filtrado</span>
+          <strong>{formatCurrency(Number(summary.balanceAmount))}</strong>
+          <small>{`Valor listado: ${formatCurrency(listedAmount)}`}</small>
+        </div>
       </section>
 
       <section className="panel">
