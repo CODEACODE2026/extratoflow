@@ -3,7 +3,8 @@ import { TransactionType } from "@prisma/client";
 import type { ParsedStatementTransaction, ParseStatementResult } from "./statement-parser.types";
 
 const DATE_BR_REGEX = /\b(\d{2})\/(\d{2})\/(\d{4})\b/;
-const MONEY_REGEX = /([+-])?\s*R\$\s*([\d.]+,\d{2})/;
+const MONEY_REGEX = /([+-])?\s*(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})\s*([CD])?\b/i;
+const PIX_CREDIT_MARKER = "PIX CREDITO DE";
 
 const toIsoDate = (day: string, month: string, year: string) => `${year}-${month}-${day}`;
 
@@ -20,26 +21,31 @@ const extractMoney = (line: string) => {
 
   return {
     raw: match[0],
-    sign: match[1] ?? "",
+    sign: match[1] ?? (match[3]?.toUpperCase() === "D" ? "-" : ""),
     amount: normalizeMoney(match[2]),
     index: match.index ?? -1
   };
 };
 
 const parsePixCreditLine = (line: string, paymentDate: string): ParsedStatementTransaction | undefined => {
-  if (!line.toUpperCase().includes("PIX CREDITO DE")) {
+  if (!line.toUpperCase().includes(PIX_CREDIT_MARKER)) {
     return undefined;
   }
 
   const money = extractMoney(line);
-  const payerStartIndex = line.toUpperCase().indexOf("PIX CREDITO DE") + "PIX CREDITO DE".length;
-  const payerEndIndex = money?.index && money.index > payerStartIndex ? money.index : line.length;
-  const payerName = cleanText(line.slice(payerStartIndex, payerEndIndex).replace(/^[:\s-]+/, ""));
-  const warnings: string[] = [];
-
   if (!money) {
-    warnings.push("Valor nao identificado.");
+    return undefined;
   }
+
+  const payerStartIndex = line.toUpperCase().indexOf(PIX_CREDIT_MARKER) + PIX_CREDIT_MARKER.length;
+  const payerEndIndex = money?.index && money.index > payerStartIndex ? money.index : line.length;
+  const payerName = cleanText(
+    line
+      .slice(payerStartIndex, payerEndIndex)
+      .replace(DATE_BR_REGEX, "")
+      .replace(/^[:\s-]+/, "")
+  );
+  const warnings: string[] = [];
 
   if (!payerName) {
     warnings.push("Pagador nao identificado.");
@@ -50,7 +56,7 @@ const parsePixCreditLine = (line: string, paymentDate: string): ParsedStatementT
     type: TransactionType.entry,
     payerName: payerName || null,
     descriptionText: null,
-    amount: money?.amount ?? "0.00",
+    amount: money.amount,
     rawText: line,
     confidence: warnings.length === 0 ? "high" : "low",
     warnings
@@ -78,6 +84,15 @@ const parseExitLine = (line: string, paymentDate: string): ParsedStatementTransa
   };
 };
 
+const shouldAppendNextLine = (line: string) => {
+  if (/saldo do dia/i.test(line)) {
+    return false;
+  }
+
+  const upperLine = line.toUpperCase();
+  return !DATE_BR_REGEX.test(line) && !upperLine.includes(PIX_CREDIT_MARKER);
+};
+
 export const parseStatementText = (text: string): ParseStatementResult => {
   const lines = text
     .split(/\r?\n/)
@@ -88,7 +103,9 @@ export const parseStatementText = (text: string): ParseStatementResult => {
   let ignoredLines = 0;
   const transactions: ParsedStatementTransaction[] = [];
 
-  for (const line of lines) {
+  for (let index = 0; index < lines.length; index += 1) {
+    let line = lines[index];
+
     if (/saldo do dia/i.test(line)) {
       ignoredLines += 1;
       continue;
@@ -103,6 +120,28 @@ export const parseStatementText = (text: string): ParseStatementResult => {
     if (!currentDate) {
       ignoredLines += 1;
       continue;
+    }
+
+    if (line.toUpperCase().includes(PIX_CREDIT_MARKER) && !extractMoney(line)) {
+      const parts = [line];
+      let lookahead = index + 1;
+
+      while (lookahead < lines.length && shouldAppendNextLine(lines[lookahead])) {
+        parts.push(lines[lookahead]);
+
+        if (extractMoney(lines[lookahead])) {
+          break;
+        }
+
+        lookahead += 1;
+      }
+
+      const mergedLine = cleanText(parts.join(" "));
+
+      if (extractMoney(mergedLine)) {
+        line = mergedLine;
+        index = lookahead;
+      }
     }
 
     const pixCredit = parsePixCreditLine(line, currentDate);

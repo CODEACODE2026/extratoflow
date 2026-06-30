@@ -15,6 +15,7 @@ import {
   type ImportStatus,
   type StatementImport
 } from "../../lib/api/imports";
+import { ApiError } from "../../lib/api/client";
 import type { TransactionType } from "../../lib/api/transactions";
 import { formatCurrency } from "../../lib/formatters/currency";
 import "./imports.css";
@@ -69,6 +70,11 @@ const formatFileSize = (size: number) => {
   return `${Math.max(1, Math.round(size / 1024))} KB`;
 };
 
+const isValidAmount = (value: string) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0;
+};
+
 export function ImportsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentImport, setCurrentImport] = useState<StatementImport | null>(null);
@@ -84,6 +90,7 @@ export function ImportsPage() {
 
   const activeRows = reviewRows.filter((row) => !row.discarded);
   const discardedRows = reviewRows.length - activeRows.length;
+  const invalidActiveRows = activeRows.filter((row) => !isValidAmount(row.amount));
   const activeTotal = useMemo(() => activeRows.reduce((sum, row) => sum + Number(row.amount), 0), [activeRows]);
 
   const loadRecentImports = async () => {
@@ -158,6 +165,11 @@ export function ImportsPage() {
       return;
     }
 
+    if (invalidActiveRows.length > 0) {
+      setError("Corrija ou descarte as movimentacoes com valor zerado antes de confirmar.");
+      return;
+    }
+
     setProcessing(true);
     setError(null);
 
@@ -178,8 +190,8 @@ export function ImportsPage() {
       setCurrentImport(result.import);
       setReviewRows([]);
       await loadRecentImports();
-    } catch {
-      setError("Nao foi possivel confirmar a importacao.");
+    } catch (confirmError) {
+      setError(confirmError instanceof ApiError ? confirmError.message : "Nao foi possivel confirmar a importacao.");
     } finally {
       setProcessing(false);
     }
@@ -249,6 +261,12 @@ export function ImportsPage() {
               <span>Total mantido</span>
               <strong>{formatCurrency(activeTotal)}</strong>
             </article>
+            {invalidActiveRows.length > 0 ? (
+              <article>
+                <span>Com valor 0</span>
+                <strong>{invalidActiveRows.length}</strong>
+              </article>
+            ) : null}
           </section>
 
           <section className="panel">

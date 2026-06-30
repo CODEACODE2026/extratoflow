@@ -4,17 +4,21 @@ const parsed = parseStatementText(`
 29/04/2026 PIX CREDITO DE: JOAO SILVA + R$ 30,00
 29/04/2026 TARIFA BANCARIA - R$ 10,00
 Saldo do Dia R$ 20,00
+30/04/2026
+PIX CREDITO DE: MARIA SOUZA
+R$ 1.250,99
+30/04/2026 PIX CREDITO DE: SEM VALOR
 `);
 
-if (parsed.totalLines !== 3) {
-  throw new Error(`Expected 3 lines, received ${parsed.totalLines}.`);
+if (parsed.totalLines !== 7) {
+  throw new Error(`Expected 7 lines, received ${parsed.totalLines}.`);
 }
 
-if (parsed.transactions.length !== 2) {
-  throw new Error(`Expected 2 transactions, received ${parsed.transactions.length}.`);
+if (parsed.transactions.length !== 3) {
+  throw new Error(`Expected 3 transactions, received ${parsed.transactions.length}.`);
 }
 
-const [entry, exit] = parsed.transactions;
+const [entry, exit, multilineEntry] = parsed.transactions;
 
 if (entry.type !== "entry" || entry.payerName !== "JOAO SILVA" || entry.amount !== "30.00") {
   throw new Error("Entry PIX parsing failed.");
@@ -24,8 +28,12 @@ if (exit.type !== "exit" || exit.amount !== "10.00") {
   throw new Error("Negative amount parsing failed.");
 }
 
-if (parsed.ignoredLines !== 1) {
-  throw new Error(`Expected 1 ignored line, received ${parsed.ignoredLines}.`);
+if (multilineEntry.type !== "entry" || multilineEntry.payerName !== "MARIA SOUZA" || multilineEntry.amount !== "1250.99") {
+  throw new Error("Multiline PIX parsing failed.");
+}
+
+if (parsed.ignoredLines !== 3) {
+  throw new Error(`Expected 3 ignored lines, received ${parsed.ignoredLines}.`);
 }
 
 console.log("Parser smoke test passed.");
