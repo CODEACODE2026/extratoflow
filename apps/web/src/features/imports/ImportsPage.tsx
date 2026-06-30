@@ -171,11 +171,6 @@ export function ImportsPage() {
       return;
     }
 
-    if (activeMonths.length > 1) {
-      setError(`Esta revisao tem meses misturados: ${activeMonths.join(", ")}. Descarte as linhas do mes errado antes de confirmar.`);
-      return;
-    }
-
     setProcessing(true);
     setError(null);
 
@@ -268,19 +263,13 @@ export function ImportsPage() {
               <strong>{formatCurrency(activeTotal)}</strong>
             </article>
             <article>
-              <span>Mes da revisao</span>
-              <strong>{activeMonths.length === 1 ? activeMonths[0] : "Misturado"}</strong>
+              <span>Meses na revisao</span>
+              <strong>{activeMonths.length === 1 ? activeMonths[0] : activeMonths.join(", ")}</strong>
             </article>
             {invalidActiveRows.length > 0 ? (
               <article>
                 <span>Com valor 0</span>
                 <strong>{invalidActiveRows.length}</strong>
-              </article>
-            ) : null}
-            {activeMonths.length > 1 ? (
-              <article>
-                <span>Meses detectados</span>
-                <strong>{activeMonths.length}</strong>
               </article>
             ) : null}
           </section>

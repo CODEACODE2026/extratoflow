@@ -71,10 +71,6 @@ const normalizeOptionalText = (value: string | null | undefined) => {
   return normalized ? normalized : null;
 };
 
-const getTransactionMonths = (transactions: ConfirmImportTransactionInput[]) => {
-  return Array.from(new Set(transactions.map((transaction) => transaction.paymentDate.slice(0, 7))));
-};
-
 export const listImports = async () => {
   const imports = await prisma.import.findMany({
     orderBy: [{ createdAt: "desc" }]
@@ -141,16 +137,6 @@ export const createPdfImport = async ({ file, userId }: CreatePdfImportInput) =>
 export const confirmImport = async ({ importId, userId, transactions }: ConfirmImportInput) => {
   if (!Array.isArray(transactions) || transactions.length === 0) {
     throw new AppError("At least one reviewed transaction is required.", 400, "IMPORT_TRANSACTIONS_REQUIRED");
-  }
-
-  const months = getTransactionMonths(transactions);
-
-  if (months.length > 1) {
-    throw new AppError(
-      `Import review has transactions from different months: ${months.join(", ")}.`,
-      400,
-      "IMPORT_HAS_MULTIPLE_MONTHS"
-    );
   }
 
   const statementImport = await prisma.import.findUnique({
