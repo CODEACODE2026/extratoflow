@@ -38,9 +38,15 @@ const toMonthFromDay = (day: string) => day.slice(0, 7);
 const toDateInputValue = (date: string) => date.slice(0, 10);
 
 const formatDate = (date: string) => {
-  const parsedDate = new Date(date);
+  const isoDate = date.slice(0, 10);
 
-  return Number.isNaN(parsedDate.getTime()) ? date : new Intl.DateTimeFormat("pt-BR").format(parsedDate);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    return date;
+  }
+
+  const [year, month, day] = isoDate.split("-");
+
+  return `${day}/${month}/${year}`;
 };
 
 const toEditForm = (transaction: Transaction): EditForm => ({

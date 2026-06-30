@@ -18,7 +18,17 @@ const currentMonth = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 };
 
-const formatDate = (date: string) => new Intl.DateTimeFormat("pt-BR").format(new Date(date));
+const formatDate = (date: string) => {
+  const isoDate = date.slice(0, 10);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    return date;
+  }
+
+  const [year, month, day] = isoDate.split("-");
+
+  return `${day}/${month}/${year}`;
+};
 
 export function InvoicesPage() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
