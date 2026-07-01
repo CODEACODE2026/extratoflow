@@ -107,6 +107,13 @@
   gap: 4px;
 }
 
+.transactions-panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .transactions-error {
   margin-bottom: 14px;
   border: 1px solid #fecaca;
@@ -153,5 +160,10 @@
   .transactions-filter-grid,
   .transaction-summary {
     grid-template-columns: 1fr;
+  }
+
+  .transactions-panel-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

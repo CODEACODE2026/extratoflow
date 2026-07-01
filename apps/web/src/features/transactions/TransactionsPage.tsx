@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { Edit3, FileText, RefreshCw, Search } from "lucide-react";
+import { Edit3, FileDown, FileText, RefreshCw, Search } from "lucide-react";
 
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -50,6 +50,24 @@ const formatDate = (date: string) => {
   return `${day}/${month}/${year}`;
 };
 
+const formatMonth = (month: string) => {
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    return month;
+  }
+
+  const [year, monthValue] = month.split("-");
+
+  return `${monthValue}/${year}`;
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
 const toEditForm = (transaction: Transaction): EditForm => ({
   amount: transaction.amount,
   descriptionText: transaction.descriptionText ?? "",
@@ -77,6 +95,7 @@ export function TransactionsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -211,6 +230,157 @@ export function TransactionsPage() {
       setFormError("Nao foi possivel lancar a nota.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const loadAllFilteredTransactions = async () => {
+    const firstPage = await listTransactions({
+      ...filters,
+      page: 1,
+      perPage: 100
+    });
+    const totalPages = Math.ceil(firstPage.pagination.total / firstPage.pagination.perPage);
+    const allTransactions = [...firstPage.transactions];
+
+    for (let nextPage = 2; nextPage <= totalPages; nextPage += 1) {
+      const result = await listTransactions({
+        ...filters,
+        page: nextPage,
+        perPage: 100
+      });
+      allTransactions.push(...result.transactions);
+    }
+
+    return {
+      summary: firstPage.summary,
+      total: firstPage.pagination.total,
+      transactions: allTransactions
+    };
+  };
+
+  const handlePrintStatement = async () => {
+    setExporting(true);
+    setError(null);
+
+    try {
+      const report = await loadAllFilteredTransactions();
+
+      if (report.total === 0) {
+        setError("Nenhuma movimentacao encontrada para gerar o extrato.");
+        return;
+      }
+
+      const printWindow = window.open("", "_blank");
+
+      if (!printWindow) {
+        setError("Nao foi possivel abrir a janela do extrato. Verifique o bloqueador de pop-up.");
+        return;
+      }
+
+      const periodLabel = filters.dateStart && filters.dateEnd ? formatDate(filters.dateStart) : formatMonth(filters.month ?? "");
+      const generatedAt = new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short"
+      }).format(new Date());
+      const filterLabels = [
+        `Periodo: ${periodLabel}`,
+        filters.type && filters.type !== "all" ? `Tipo: ${filters.type === "entry" ? "Entrada" : "Saida"}` : "Tipo: Todos",
+        filters.status && filters.status !== "all" ? `Status: ${filters.status === "pending" ? "Pendente" : "Transmitido"}` : "Status: Todos",
+        filters.payerName?.trim() ? `Pagador: ${filters.payerName.trim()}` : null,
+        filters.description?.trim() ? `Descricao: ${filters.description.trim()}` : null
+      ].filter(Boolean);
+      const rows = report.transactions
+        .map(
+          (transaction) => `
+            <tr>
+              <td>${escapeHtml(formatDate(transaction.paymentDate))}</td>
+              <td>${escapeHtml(transaction.payerName ?? "-")}</td>
+              <td>${escapeHtml(transaction.descriptionText ?? "-")}</td>
+              <td>${transaction.type === "entry" ? "Entrada" : "Saida"}</td>
+              <td>${transaction.status === "pending" ? "Pendente" : "Transmitido"}</td>
+              <td>${escapeHtml(transaction.invoiceNumber ?? "-")}</td>
+              <td class="${transaction.type === "entry" ? "amount-entry" : "amount-exit"}">${escapeHtml(formatCurrency(Number(transaction.amount)))}</td>
+            </tr>
+          `
+        )
+        .join("");
+
+      printWindow.document.write(`
+        <!doctype html>
+        <html lang="pt-BR">
+          <head>
+            <meta charset="utf-8" />
+            <title>ExtratoFlow - Extrato ${escapeHtml(periodLabel)}</title>
+            <style>
+              * { box-sizing: border-box; }
+              body { margin: 0; color: #111827; font-family: Arial, sans-serif; }
+              main { padding: 28px; }
+              header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #111827; padding-bottom: 16px; }
+              h1 { margin: 0; font-size: 24px; }
+              p { margin: 4px 0 0; color: #475569; font-size: 12px; }
+              .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
+              .card { border: 1px solid #d1d5db; border-radius: 6px; padding: 10px; }
+              .card span { display: block; color: #64748b; font-size: 11px; text-transform: uppercase; }
+              .card strong { display: block; margin-top: 5px; font-size: 16px; }
+              .filters { margin: 12px 0 18px; color: #334155; font-size: 12px; }
+              table { width: 100%; border-collapse: collapse; font-size: 11px; }
+              th, td { border-bottom: 1px solid #e5e7eb; padding: 7px 6px; text-align: left; vertical-align: top; }
+              th { background: #f3f4f6; color: #374151; font-size: 10px; text-transform: uppercase; }
+              td:last-child, th:last-child { text-align: right; white-space: nowrap; }
+              .amount-entry { color: #047857; font-weight: 700; }
+              .amount-exit { color: #b91c1c; font-weight: 700; }
+              @page { margin: 14mm; }
+              @media print { main { padding: 0; } }
+            </style>
+          </head>
+          <body>
+            <main>
+              <header>
+                <div>
+                  <h1>ExtratoFlow</h1>
+                  <p>Extrato de movimentacoes - ${escapeHtml(periodLabel)}</p>
+                </div>
+                <div>
+                  <p>Gerado em ${escapeHtml(generatedAt)}</p>
+                  <p>${report.total} registros</p>
+                </div>
+              </header>
+              <section class="summary">
+                <div class="card"><span>Entradas</span><strong>${escapeHtml(formatCurrency(Number(report.summary.entryAmount)))}</strong></div>
+                <div class="card"><span>Saidas</span><strong>${escapeHtml(formatCurrency(Number(report.summary.exitAmount)))}</strong></div>
+                <div class="card"><span>Saldo</span><strong>${escapeHtml(formatCurrency(Number(report.summary.balanceAmount)))}</strong></div>
+                <div class="card"><span>Registros</span><strong>${report.total}</strong></div>
+              </section>
+              <div class="filters">${escapeHtml(filterLabels.join(" | "))}</div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Pagador</th>
+                    <th>Descricao</th>
+                    <th>Tipo</th>
+                    <th>Status</th>
+                    <th>Nota</th>
+                    <th>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </main>
+            <script>
+              window.addEventListener("load", () => {
+                window.print();
+              });
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      setSuccess("Extrato gerado. Use Salvar como PDF na janela de impressao.");
+    } catch {
+      setError("Nao foi possivel gerar o extrato PDF. Verifique a sessao, a API e os filtros.");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -383,7 +553,12 @@ export function TransactionsPage() {
             <h2>Movimentacoes</h2>
             <p>Consulte, edite e lance nota individual por registro.</p>
           </div>
-          <Badge tone="neutral">{selectedPeriod}</Badge>
+          <div className="transactions-panel-actions">
+            <Badge tone="neutral">{selectedPeriod}</Badge>
+            <Button leadingIcon={<FileDown size={16} />} loading={exporting} onClick={handlePrintStatement} variant="secondary">
+              Gerar extrato PDF
+            </Button>
+          </div>
         </header>
 
         {loading ? (
