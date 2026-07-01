@@ -1,7 +1,7 @@
 import { apiRequest } from "./client";
 
 export type DescriptionStatus = "active" | "inactive";
-export type SuggestedTransactionType = "entry" | "exit";
+export type SuggestedTransactionType = "entry" | "exit" | "refund";
 
 export type Description = {
   id: string;

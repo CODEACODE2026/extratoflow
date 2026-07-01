@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
 
-type BadgeTone = "neutral" | "entry" | "exit" | "pending" | "transmitted" | "error";
+type BadgeTone = "neutral" | "entry" | "exit" | "refund" | "pending" | "transmitted" | "error";
 
 type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
   tone?: BadgeTone;

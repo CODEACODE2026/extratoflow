@@ -21,6 +21,7 @@ enum RecordStatus {
 enum SuggestedTransactionType {
   entry
   exit
+  refund
 }
 
 enum ImportStatus {
@@ -33,6 +34,7 @@ enum ImportStatus {
 enum TransactionType {
   entry
   exit
+  refund
 }
 
 enum TransactionStatus {

@@ -39,7 +39,19 @@ const typeLabel = (type: Description["suggestedType"]) => {
     return "Saida";
   }
 
+  if (type === "refund") {
+    return "Devolucao";
+  }
+
   return "Sem sugestao";
+};
+
+const typeTone = (type: Description["suggestedType"]) => {
+  if (type === "entry" || type === "exit" || type === "refund") {
+    return type;
+  }
+
+  return "neutral";
 };
 
 export function DescriptionsPage() {
@@ -178,7 +190,7 @@ export function DescriptionsPage() {
       key: "type",
       header: "Tipo sugerido",
       render: (row: Description) => (
-        <Badge tone={row.suggestedType === "entry" ? "entry" : row.suggestedType === "exit" ? "exit" : "neutral"}>
+        <Badge tone={typeTone(row.suggestedType)}>
           {typeLabel(row.suggestedType)}
         </Badge>
       )
@@ -346,6 +358,7 @@ export function DescriptionsPage() {
               <option value="">Sem sugestao</option>
               <option value="entry">Entrada</option>
               <option value="exit">Saida</option>
+              <option value="refund">Devolucao</option>
             </select>
           </label>
         </form>

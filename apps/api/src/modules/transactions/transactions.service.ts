@@ -202,6 +202,8 @@ export const listTransactions = async (filters: ListTransactionsFilters) => {
     totalsByType.find((item) => item.type === TransactionType.entry)?._sum.amount ?? new Prisma.Decimal(0);
   const exitAmount =
     totalsByType.find((item) => item.type === TransactionType.exit)?._sum.amount ?? new Prisma.Decimal(0);
+  const refundAmount =
+    totalsByType.find((item) => item.type === TransactionType.refund)?._sum.amount ?? new Prisma.Decimal(0);
   const pendingAmount =
     totalsByStatus.find((item) => item.status === TransactionStatus.pending)?._sum.amount ?? new Prisma.Decimal(0);
   const transmittedAmount =
@@ -217,7 +219,8 @@ export const listTransactions = async (filters: ListTransactionsFilters) => {
     summary: {
       entryAmount: entryAmount.toFixed(2),
       exitAmount: exitAmount.toFixed(2),
-      balanceAmount: entryAmount.minus(exitAmount).toFixed(2),
+      refundAmount: refundAmount.toFixed(2),
+      balanceAmount: entryAmount.plus(refundAmount).minus(exitAmount).toFixed(2),
       pendingAmount: pendingAmount.toFixed(2),
       transmittedAmount: transmittedAmount.toFixed(2)
     }

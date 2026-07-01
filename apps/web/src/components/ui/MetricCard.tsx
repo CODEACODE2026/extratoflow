@@ -4,7 +4,7 @@ type MetricCardProps = {
   label: string;
   value: string;
   period: string;
-  tone?: "neutral" | "entry" | "exit" | "pending" | "transmitted";
+  tone?: "neutral" | "entry" | "exit" | "refund" | "pending" | "transmitted";
   action?: ReactNode;
 };
 

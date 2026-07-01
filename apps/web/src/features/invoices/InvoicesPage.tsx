@@ -31,6 +31,18 @@ const formatDate = (date: string) => {
   return `${day}/${month}/${year}`;
 };
 
+const transactionTypeLabel = (type: TransactionType) => {
+  if (type === "entry") {
+    return "Entrada";
+  }
+
+  if (type === "exit") {
+    return "Saida";
+  }
+
+  return "Devolucao";
+};
+
 export function InvoicesPage() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [descriptionText, setDescriptionText] = useState("");
@@ -120,7 +132,7 @@ export function InvoicesPage() {
     {
       key: "type",
       header: "Tipo",
-      render: (row: Transaction) => <Badge tone={row.type}>{row.type === "entry" ? "Entrada" : "Saida"}</Badge>
+      render: (row: Transaction) => <Badge tone={row.type}>{transactionTypeLabel(row.type)}</Badge>
     },
     {
       key: "invoice",
@@ -166,6 +178,7 @@ export function InvoicesPage() {
               <option value="">Todos</option>
               <option value="entry">Entrada</option>
               <option value="exit">Saida</option>
+              <option value="refund">Devolucao</option>
             </select>
           </label>
           <div className="invoice-search">

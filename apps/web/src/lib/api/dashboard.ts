@@ -10,6 +10,7 @@ export type DashboardSummary = {
   totals: {
     entry: string;
     exit: string;
+    refund: string;
     pending: string;
     transmitted: string;
     balance: string;
@@ -17,6 +18,7 @@ export type DashboardSummary = {
   counts: {
     entry: number;
     exit: number;
+    refund: number;
     pending: number;
     transmitted: number;
     imports: number;
@@ -28,6 +30,7 @@ export type MonthlyIndicator = {
   totals: {
     entry: string;
     exit: string;
+    refund: string;
     pending: string;
     transmitted: string;
     balance: string;
@@ -36,6 +39,7 @@ export type MonthlyIndicator = {
   counts: {
     entry: number;
     exit: number;
+    refund: number;
     pending: number;
     transmitted: number;
     total: number;

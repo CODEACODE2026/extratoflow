@@ -279,7 +279,7 @@ h2 {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -315,6 +315,10 @@ h2 {
 
 .metric-card--exit {
   border-top: 3px solid #dc2626;
+}
+
+.metric-card--refund {
+  border-top: 3px solid #2563eb;
 }
 
 .metric-card--pending {
@@ -434,6 +438,11 @@ h2 {
 .badge--entry {
   background: #ddf8ec;
   color: #047857;
+}
+
+.badge--refund {
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .badge--exit,
@@ -656,7 +665,7 @@ h2 {
   }
 
   .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .filter-bar {

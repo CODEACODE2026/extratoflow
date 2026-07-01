@@ -38,14 +38,14 @@ const getTotalCount = (summary: DashboardSummary | null) => {
     return 0;
   }
 
-  return summary.counts.entry + summary.counts.exit;
+  return summary.counts.entry + summary.counts.exit + summary.counts.refund;
 };
 
 const getMaxMonthlyAmount = (months: MonthlyIndicator[]) => {
   return Math.max(
     1,
     ...months.map((month) =>
-      Math.max(Number(month.totals.entry), Number(month.totals.exit), Math.abs(Number(month.totals.balance)))
+      Math.max(Number(month.totals.entry), Number(month.totals.exit), Number(month.totals.refund), Math.abs(Number(month.totals.balance)))
     )
   );
 };
@@ -122,6 +122,12 @@ export function DashboardPreview() {
     },
     {
       align: "right" as const,
+      key: "refund",
+      header: "Devolucoes",
+      render: (row: MonthlyIndicator) => formatApiCurrency(row.totals.refund)
+    },
+    {
+      align: "right" as const,
       key: "pending",
       header: "Pendente",
       render: (row: MonthlyIndicator) => formatApiCurrency(row.totals.pending)
@@ -150,7 +156,7 @@ export function DashboardPreview() {
           </Button>
         </section>
         <section className="metric-grid" aria-label="Carregando indicadores">
-          {["Entradas", "Saidas", "Pendentes", "Transmitidos"].map((label) => (
+          {["Entradas", "Saidas", "Devolucoes", "Pendentes", "Transmitidos"].map((label) => (
             <article className="metric-card metric-card--loading" key={label}>
               <span className="skeleton-line skeleton-line--short" />
               <span className="skeleton-line skeleton-line--value" />
@@ -211,6 +217,12 @@ export function DashboardPreview() {
           period={formatMonthLabel(selectedMonth)}
           tone="exit"
           value={summary ? formatApiCurrency(summary.totals.exit) : formatCurrency(0)}
+        />
+        <MetricCard
+          label="Devolucoes"
+          period={formatMonthLabel(selectedMonth)}
+          tone="refund"
+          value={summary ? formatApiCurrency(summary.totals.refund) : formatCurrency(0)}
         />
         <MetricCard
           action={<Button leadingIcon={<ArrowRight size={15} />} size="sm" variant="secondary">Ver</Button>}
@@ -281,7 +293,7 @@ export function DashboardPreview() {
               {dashboard.monthly.map((month, index) => {
                 const entryHeight = Math.max(3, (Number(month.totals.entry) / maxMonthlyAmount) * 100);
                 const exitHeight = Math.max(3, (Number(month.totals.exit) / maxMonthlyAmount) * 100);
-                const hasValue = Number(month.totals.entry) > 0 || Number(month.totals.exit) > 0 || Number(month.totals.balance) !== 0;
+                const hasValue = Number(month.totals.entry) > 0 || Number(month.totals.exit) > 0 || Number(month.totals.refund) > 0 || Number(month.totals.balance) !== 0;
 
                 return (
                   <div className="dashboard-chart__month" key={month.month} title={`${formatMonthLabel(month.month)} - entradas ${formatApiCurrency(month.totals.entry)}, saidas ${formatApiCurrency(month.totals.exit)}`}>

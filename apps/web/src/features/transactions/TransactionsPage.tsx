@@ -68,6 +68,30 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 
+const transactionTypeLabel = (type: TransactionType) => {
+  if (type === "entry") {
+    return "Entrada";
+  }
+
+  if (type === "exit") {
+    return "Saida";
+  }
+
+  return "Devolucao";
+};
+
+const transactionAmountClass = (type: TransactionType) => {
+  if (type === "entry") {
+    return "transaction-amount transaction-amount--entry";
+  }
+
+  if (type === "exit") {
+    return "transaction-amount transaction-amount--exit";
+  }
+
+  return "transaction-amount transaction-amount--refund";
+};
+
 const toEditForm = (transaction: Transaction): EditForm => ({
   amount: transaction.amount,
   descriptionText: transaction.descriptionText ?? "",
@@ -90,6 +114,7 @@ export function TransactionsPage() {
     balanceAmount: "0.00",
     entryAmount: "0.00",
     exitAmount: "0.00",
+    refundAmount: "0.00",
     pendingAmount: "0.00",
     transmittedAmount: "0.00"
   });
@@ -284,7 +309,7 @@ export function TransactionsPage() {
       }).format(new Date());
       const filterLabels = [
         `Periodo: ${periodLabel}`,
-        filters.type && filters.type !== "all" ? `Tipo: ${filters.type === "entry" ? "Entrada" : "Saida"}` : "Tipo: Todos",
+        filters.type && filters.type !== "all" ? `Tipo: ${transactionTypeLabel(filters.type)}` : "Tipo: Todos",
         filters.payerName?.trim() ? `Pagador: ${filters.payerName.trim()}` : null,
         filters.description?.trim() ? `Descricao: ${filters.description.trim()}` : null
       ].filter(Boolean);
@@ -295,9 +320,9 @@ export function TransactionsPage() {
               <td>${escapeHtml(formatDate(transaction.paymentDate))}</td>
               <td>${escapeHtml(transaction.payerName ?? "-")}</td>
               <td>${escapeHtml(transaction.descriptionText ?? "-")}</td>
-              <td>${transaction.type === "entry" ? "Entrada" : "Saida"}</td>
+              <td>${transactionTypeLabel(transaction.type)}</td>
               <td>${escapeHtml(transaction.invoiceNumber ?? "-")}</td>
-              <td class="${transaction.type === "entry" ? "amount-entry" : "amount-exit"}">${escapeHtml(formatCurrency(Number(transaction.amount)))}</td>
+              <td class="${transaction.type === "entry" ? "amount-entry" : transaction.type === "exit" ? "amount-exit" : "amount-refund"}">${escapeHtml(formatCurrency(Number(transaction.amount)))}</td>
             </tr>
           `
         )
@@ -316,7 +341,7 @@ export function TransactionsPage() {
               header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #111827; padding-bottom: 16px; }
               h1 { margin: 0; font-size: 24px; }
               p { margin: 4px 0 0; color: #475569; font-size: 12px; }
-              .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
+              .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 18px 0; }
               .card { border: 1px solid #d1d5db; border-radius: 6px; padding: 10px; }
               .card span { display: block; color: #64748b; font-size: 11px; text-transform: uppercase; }
               .card strong { display: block; margin-top: 5px; font-size: 16px; }
@@ -327,6 +352,7 @@ export function TransactionsPage() {
               td:last-child, th:last-child { text-align: right; white-space: nowrap; }
               .amount-entry { color: #047857; font-weight: 700; }
               .amount-exit { color: #b91c1c; font-weight: 700; }
+              .amount-refund { color: #1d4ed8; font-weight: 700; }
               @page { margin: 14mm; }
               @media print { main { padding: 0; } }
             </style>
@@ -346,6 +372,7 @@ export function TransactionsPage() {
               <section class="summary">
                 <div class="card"><span>Entradas</span><strong>${escapeHtml(formatCurrency(Number(report.summary.entryAmount)))}</strong></div>
                 <div class="card"><span>Saidas</span><strong>${escapeHtml(formatCurrency(Number(report.summary.exitAmount)))}</strong></div>
+                <div class="card"><span>Devolucoes</span><strong>${escapeHtml(formatCurrency(Number(report.summary.refundAmount)))}</strong></div>
                 <div class="card"><span>Saldo</span><strong>${escapeHtml(formatCurrency(Number(report.summary.balanceAmount)))}</strong></div>
                 <div class="card"><span>Registros</span><strong>${report.total}</strong></div>
               </section>
@@ -402,7 +429,7 @@ export function TransactionsPage() {
       key: "amount",
       header: "Valor",
       render: (row: Transaction) => (
-        <strong className={row.type === "entry" ? "transaction-amount transaction-amount--entry" : "transaction-amount transaction-amount--exit"}>
+        <strong className={transactionAmountClass(row.type)}>
           {formatCurrency(Number(row.amount))}
         </strong>
       )
@@ -410,7 +437,7 @@ export function TransactionsPage() {
     {
       key: "type",
       header: "Tipo",
-      render: (row: Transaction) => <Badge tone={row.type}>{row.type === "entry" ? "Entrada" : "Saida"}</Badge>
+      render: (row: Transaction) => <Badge tone={row.type}>{transactionTypeLabel(row.type)}</Badge>
     },
     {
       key: "status",
@@ -488,6 +515,7 @@ export function TransactionsPage() {
               <option value="all">Todos</option>
               <option value="entry">Entrada</option>
               <option value="exit">Saida</option>
+              <option value="refund">Devolucao</option>
             </select>
           </label>
           <div className="transaction-search">
@@ -541,6 +569,11 @@ export function TransactionsPage() {
           <span>Saldo filtrado</span>
           <strong>{formatCurrency(Number(summary.balanceAmount))}</strong>
           <small>{`Valor listado: ${formatCurrency(listedAmount)}`}</small>
+        </div>
+        <div className="transaction-summary__card">
+          <span>Total de devolucoes</span>
+          <strong className="transaction-amount--refund">{formatCurrency(Number(summary.refundAmount))}</strong>
+          <small>Periodo + filtros atuais</small>
         </div>
       </section>
 
@@ -606,6 +639,7 @@ export function TransactionsPage() {
               <select className="field__control" id="transaction-edit-type" onChange={(event) => setEditForm((current) => current && { ...current, type: event.target.value as TransactionType })} value={editForm.type}>
                 <option value="entry">Entrada</option>
                 <option value="exit">Saida</option>
+                <option value="refund">Devolucao</option>
               </select>
             </label>
             <Input label="Valor" min="0.01" onChange={(event) => setEditForm((current) => current && { ...current, amount: event.target.value })} step="0.01" type="number" value={editForm.amount} />

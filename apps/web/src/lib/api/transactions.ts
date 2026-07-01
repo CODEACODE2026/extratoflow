@@ -1,6 +1,6 @@
 import { apiRequest } from "./client";
 
-export type TransactionType = "entry" | "exit";
+export type TransactionType = "entry" | "exit" | "refund";
 export type TransactionStatus = "pending" | "transmitted";
 
 export type Transaction = {
@@ -51,6 +51,7 @@ type ListTransactionsResponse = {
   summary: {
     entryAmount: string;
     exitAmount: string;
+    refundAmount: string;
     balanceAmount: string;
     pendingAmount: string;
     transmittedAmount: string;

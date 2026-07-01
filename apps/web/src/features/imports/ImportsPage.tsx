@@ -330,6 +330,7 @@ export function ImportsPage() {
                           <select className="field__control" id={`type-${row.id}`} onChange={(event) => updateRow(row.id, { type: event.target.value as TransactionType })} value={row.type}>
                             <option value="entry">Entrada</option>
                             <option value="exit">Saida</option>
+                            <option value="refund">Devolucao</option>
                           </select>
                         </label>
                       </td>

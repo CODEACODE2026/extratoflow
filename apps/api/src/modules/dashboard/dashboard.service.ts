@@ -22,6 +22,7 @@ type DashboardPeriod = {
 type DashboardTotals = {
   entry: Prisma.Decimal;
   exit: Prisma.Decimal;
+  refund: Prisma.Decimal;
   pending: Prisma.Decimal;
   transmitted: Prisma.Decimal;
   balance: Prisma.Decimal;
@@ -31,6 +32,7 @@ type DashboardTotals = {
 const zeroTotals = (): DashboardTotals => ({
   entry: new Prisma.Decimal(0),
   exit: new Prisma.Decimal(0),
+  refund: new Prisma.Decimal(0),
   pending: new Prisma.Decimal(0),
   transmitted: new Prisma.Decimal(0),
   balance: new Prisma.Decimal(0),
@@ -110,9 +112,10 @@ export const getDashboardSummary = async (filters: SummaryFilters) => {
   const period = buildSummaryPeriod(filters);
   const dateWhere = buildDateWhere(period);
 
-  const [entries, exits, pending, transmitted, imports] = await Promise.all([
+  const [entries, exits, refunds, pending, transmitted, imports] = await Promise.all([
     sumAmount({ ...dateWhere, type: TransactionType.entry }),
     sumAmount({ ...dateWhere, type: TransactionType.exit }),
+    sumAmount({ ...dateWhere, type: TransactionType.refund }),
     sumAmount({ ...dateWhere, status: TransactionStatus.pending }),
     sumAmount({ ...dateWhere, status: TransactionStatus.transmitted }),
     prisma.import.count({
@@ -135,13 +138,15 @@ export const getDashboardSummary = async (filters: SummaryFilters) => {
     totals: {
       entry: decimalToString(entries.amount),
       exit: decimalToString(exits.amount),
+      refund: decimalToString(refunds.amount),
       pending: decimalToString(pending.amount),
       transmitted: decimalToString(transmitted.amount),
-      balance: decimalToString(entries.amount.minus(exits.amount))
+      balance: decimalToString(entries.amount.plus(refunds.amount).minus(exits.amount))
     },
     counts: {
       entry: entries.count,
       exit: exits.count,
+      refund: refunds.count,
       pending: pending.count,
       transmitted: transmitted.count,
       imports
@@ -159,6 +164,7 @@ export const getDashboardMonthly = async (filters: MonthlyFilters) => {
     counts: {
       entry: 0,
       exit: 0,
+      refund: 0,
       pending: 0,
       transmitted: 0,
       total: 0
@@ -190,9 +196,12 @@ export const getDashboardMonthly = async (filters: MonthlyFilters) => {
     if (transaction.type === TransactionType.entry) {
       bucket.totals.entry = bucket.totals.entry.plus(transaction.amount);
       bucket.counts.entry += 1;
-    } else {
+    } else if (transaction.type === TransactionType.exit) {
       bucket.totals.exit = bucket.totals.exit.plus(transaction.amount);
       bucket.counts.exit += 1;
+    } else {
+      bucket.totals.refund = bucket.totals.refund.plus(transaction.amount);
+      bucket.counts.refund += 1;
     }
 
     if (transaction.status === TransactionStatus.pending) {
@@ -203,7 +212,7 @@ export const getDashboardMonthly = async (filters: MonthlyFilters) => {
       bucket.counts.transmitted += 1;
     }
 
-    bucket.totals.balance = bucket.totals.entry.minus(bucket.totals.exit);
+    bucket.totals.balance = bucket.totals.entry.plus(bucket.totals.refund).minus(bucket.totals.exit);
   }
 
   return {
@@ -213,6 +222,7 @@ export const getDashboardMonthly = async (filters: MonthlyFilters) => {
       totals: {
         entry: decimalToString(bucket.totals.entry),
         exit: decimalToString(bucket.totals.exit),
+        refund: decimalToString(bucket.totals.refund),
         pending: decimalToString(bucket.totals.pending),
         transmitted: decimalToString(bucket.totals.transmitted),
         balance: decimalToString(bucket.totals.balance),
