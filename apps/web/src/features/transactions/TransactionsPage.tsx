@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { DataTable } from "../../components/ui/DataTable";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
+import { Pagination } from "../../components/ui/Pagination";
 import { Toast } from "../../components/ui/Toast";
 import {
   applyInvoiceToTransaction,
@@ -60,6 +61,8 @@ const toEditForm = (transaction: Transaction): EditForm => ({
 export function TransactionsPage() {
   const [filters, setFilters] = useState<TransactionFilters>({
     month: currentMonth(),
+    page: 1,
+    perPage: 25,
     status: "all",
     type: "all"
   });
@@ -106,14 +109,23 @@ export function TransactionsPage() {
     return transactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
   }, [transactions]);
   const selectedPeriod = filters.dateStart && filters.dateEnd ? filters.dateStart : (filters.month ?? "Sem periodo");
+  const page = filters.page ?? 1;
+  const perPage = filters.perPage ?? 25;
 
-  const handleDayChange = (day: string) => {
+  const updateFilters = (patch: Partial<TransactionFilters>) => {
     setFilters((current) => ({
       ...current,
+      ...patch,
+      page: 1
+    }));
+  };
+
+  const handleDayChange = (day: string) => {
+    updateFilters({
       dateEnd: day || undefined,
       dateStart: day || undefined,
-      month: day ? toMonthFromDay(day) : current.month
-    }));
+      month: day ? toMonthFromDay(day) : filters.month
+    });
   };
 
   const openEditModal = (transaction: Transaction) => {
@@ -275,7 +287,7 @@ export function TransactionsPage() {
         <div className="transactions-filter-grid">
           <Input
             label="Mes"
-            onChange={(event) => setFilters((current) => ({ ...current, dateEnd: undefined, dateStart: undefined, month: event.target.value }))}
+            onChange={(event) => updateFilters({ dateEnd: undefined, dateStart: undefined, month: event.target.value })}
             type="month"
             value={filters.month}
           />
@@ -290,7 +302,7 @@ export function TransactionsPage() {
             <select
               className="field__control"
               id="transaction-status-filter"
-              onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value as TransactionStatus | "all" }))}
+              onChange={(event) => updateFilters({ status: event.target.value as TransactionStatus | "all" })}
               value={filters.status}
             >
               <option value="all">Todos</option>
@@ -303,7 +315,7 @@ export function TransactionsPage() {
             <select
               className="field__control"
               id="transaction-type-filter"
-              onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value as TransactionType | "all" }))}
+              onChange={(event) => updateFilters({ type: event.target.value as TransactionType | "all" })}
               value={filters.type}
             >
               <option value="all">Todos</option>
@@ -315,7 +327,7 @@ export function TransactionsPage() {
             <Search aria-hidden="true" size={16} />
             <input
               aria-label="Buscar pagador"
-              onChange={(event) => setFilters((current) => ({ ...current, payerName: event.target.value }))}
+              onChange={(event) => updateFilters({ payerName: event.target.value })}
               placeholder="Pagador"
               type="search"
               value={filters.payerName ?? ""}
@@ -325,7 +337,7 @@ export function TransactionsPage() {
             <Search aria-hidden="true" size={16} />
             <input
               aria-label="Buscar descricao"
-              onChange={(event) => setFilters((current) => ({ ...current, description: event.target.value }))}
+              onChange={(event) => updateFilters({ description: event.target.value })}
               placeholder="Descricao"
               type="search"
               value={filters.description ?? ""}
@@ -390,6 +402,15 @@ export function TransactionsPage() {
             rows={transactions}
           />
         )}
+        {!loading ? (
+          <Pagination
+            onPageChange={(nextPage) => setFilters((current) => ({ ...current, page: nextPage }))}
+            onPerPageChange={(nextPerPage) => setFilters((current) => ({ ...current, page: 1, perPage: nextPerPage }))}
+            page={page}
+            perPage={perPage}
+            total={total}
+          />
+        ) : null}
       </section>
 
       <Modal

@@ -22,6 +22,8 @@ export type Transaction = {
 };
 
 export type TransactionFilters = {
+  page?: number;
+  perPage?: number;
   month?: string;
   dateStart?: string;
   dateEnd?: string;
@@ -61,8 +63,8 @@ type TransactionResponse = {
 
 const toSearchParams = (filters: TransactionFilters) => {
   const params = new URLSearchParams({
-    page: "1",
-    perPage: "50"
+    page: String(filters.page ?? 1),
+    perPage: String(filters.perPage ?? 25)
   });
 
   if (filters.month) {

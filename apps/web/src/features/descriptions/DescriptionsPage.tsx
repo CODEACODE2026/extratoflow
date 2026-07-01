@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { DataTable } from "../../components/ui/DataTable";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
+import { Pagination } from "../../components/ui/Pagination";
 import { Toast } from "../../components/ui/Toast";
 import {
   createDescription,
@@ -52,6 +53,8 @@ export function DescriptionsPage() {
   const [form, setForm] = useState<FormState>(initialFormState);
   const [formError, setFormError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   const loadDescriptions = useCallback(async () => {
     setLoading(true);
@@ -79,6 +82,15 @@ export function DescriptionsPage() {
 
     return descriptions.filter((description) => description.name.toLowerCase().includes(normalizedSearch));
   }, [descriptions, searchTerm]);
+  const paginatedDescriptions = useMemo(() => {
+    const start = (page - 1) * perPage;
+
+    return filteredDescriptions.slice(start, start + perPage);
+  }, [filteredDescriptions, page, perPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter]);
 
   const openCreateModal = () => {
     setForm(initialFormState);
@@ -271,9 +283,21 @@ export function DescriptionsPage() {
             emptyDescription="Crie a primeira descricao padrao para acelerar a revisao das movimentacoes."
             emptyTitle="Nenhuma descricao encontrada"
             getRowKey={(row) => row.id}
-            rows={filteredDescriptions}
+            rows={paginatedDescriptions}
           />
         )}
+        {!loading ? (
+          <Pagination
+            onPageChange={setPage}
+            onPerPageChange={(nextPerPage) => {
+              setPerPage(nextPerPage);
+              setPage(1);
+            }}
+            page={page}
+            perPage={perPage}
+            total={filteredDescriptions.length}
+          />
+        ) : null}
       </section>
 
       <Modal

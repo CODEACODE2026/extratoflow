@@ -1,10 +1,11 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { CheckCircle2, FileText, Search } from "lucide-react";
 
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { DataTable } from "../../components/ui/DataTable";
 import { Input } from "../../components/ui/Input";
+import { Pagination } from "../../components/ui/Pagination";
 import { Toast } from "../../components/ui/Toast";
 import { ApiError } from "../../lib/api/client";
 import { applyBulkInvoice, prepareBulkInvoice, type BulkInvoiceFilters, type BulkInvoicePreview } from "../../lib/api/invoices";
@@ -39,6 +40,14 @@ export function InvoicesPage() {
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [previewPage, setPreviewPage] = useState(1);
+  const [previewPerPage, setPreviewPerPage] = useState(10);
+  const previewTransactions = preview?.transactions ?? [];
+  const paginatedPreviewTransactions = useMemo(() => {
+    const start = (previewPage - 1) * previewPerPage;
+
+    return previewTransactions.slice(start, start + previewPerPage);
+  }, [previewPage, previewPerPage, previewTransactions]);
 
   const handlePrepare = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -54,6 +63,7 @@ export function InvoicesPage() {
 
     try {
       setPreview(await prepareBulkInvoice(invoiceNumber.trim(), filters));
+      setPreviewPage(1);
     } catch (prepareError) {
       setError(prepareError instanceof ApiError ? prepareError.message : "Nao foi possivel gerar a previa. Verifique filtros, permissao e banco de dados.");
       setPreview(null);
@@ -209,7 +219,17 @@ export function InvoicesPage() {
               emptyDescription="Ajuste os filtros para localizar movimentacoes do periodo."
               emptyTitle="Nenhum registro na previa"
               getRowKey={(row) => row.id}
-              rows={preview.transactions}
+              rows={paginatedPreviewTransactions}
+            />
+            <Pagination
+              onPageChange={setPreviewPage}
+              onPerPageChange={(nextPerPage) => {
+                setPreviewPerPage(nextPerPage);
+                setPreviewPage(1);
+              }}
+              page={previewPage}
+              perPage={previewPerPage}
+              total={preview.transactions.length}
             />
           </section>
         </>

@@ -7,6 +7,7 @@ import { DataTable } from "../../components/ui/DataTable";
 import { Input } from "../../components/ui/Input";
 import { MetricCard } from "../../components/ui/MetricCard";
 import { Modal } from "../../components/ui/Modal";
+import { Pagination } from "../../components/ui/Pagination";
 import { Toast } from "../../components/ui/Toast";
 import { createUser, listUsers, updateUser, updateUserStatus, type User, type UserRole, type UserStatus } from "../../lib/api/users";
 import "./users.css";
@@ -56,6 +57,8 @@ export function UsersPage() {
   const [form, setForm] = useState<FormState>(initialFormState);
   const [formError, setFormError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -88,6 +91,15 @@ export function UsersPage() {
       return matchesStatus && matchesRole && matchesSearch;
     });
   }, [roleFilter, searchTerm, statusFilter, users]);
+  const paginatedUsers = useMemo(() => {
+    const start = (page - 1) * perPage;
+
+    return filteredUsers.slice(start, start + perPage);
+  }, [filteredUsers, page, perPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [roleFilter, searchTerm, statusFilter]);
 
   const metrics = useMemo(() => {
     return {
@@ -333,9 +345,21 @@ export function UsersPage() {
             emptyDescription="Crie usuarios para liberar acesso ao ExtratoFlow com o perfil correto."
             emptyTitle="Nenhum usuario encontrado"
             getRowKey={(row) => row.id}
-            rows={filteredUsers}
+            rows={paginatedUsers}
           />
         )}
+        {!loading ? (
+          <Pagination
+            onPageChange={setPage}
+            onPerPageChange={(nextPerPage) => {
+              setPerPage(nextPerPage);
+              setPage(1);
+            }}
+            page={page}
+            perPage={perPage}
+            total={filteredUsers.length}
+          />
+        ) : null}
       </section>
 
       <Modal

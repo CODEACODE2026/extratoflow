@@ -5,6 +5,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
+import { Pagination } from "../../components/ui/Pagination";
 import { Toast } from "../../components/ui/Toast";
 import {
   confirmImport,
@@ -87,12 +88,26 @@ export function ImportsPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedImport, setSelectedImport] = useState<StatementImport | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewPerPage, setReviewPerPage] = useState(25);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPerPage, setHistoryPerPage] = useState(10);
 
   const activeRows = reviewRows.filter((row) => !row.discarded);
   const discardedRows = reviewRows.length - activeRows.length;
   const invalidActiveRows = activeRows.filter((row) => !isValidAmount(row.amount));
   const activeMonths = Array.from(new Set(activeRows.map((row) => row.paymentDate.slice(0, 7))));
   const activeTotal = useMemo(() => activeRows.reduce((sum, row) => sum + Number(row.amount), 0), [activeRows]);
+  const paginatedReviewRows = useMemo(() => {
+    const start = (reviewPage - 1) * reviewPerPage;
+
+    return reviewRows.slice(start, start + reviewPerPage);
+  }, [reviewPage, reviewPerPage, reviewRows]);
+  const paginatedRecentImports = useMemo(() => {
+    const start = (historyPage - 1) * historyPerPage;
+
+    return recentImports.slice(start, start + historyPerPage);
+  }, [historyPage, historyPerPage, recentImports]);
 
   const loadRecentImports = async () => {
     setLoading(true);
@@ -142,6 +157,7 @@ export function ImportsPage() {
           id: `${candidate.paymentDate}-${index}`
         }))
       );
+      setReviewPage(1);
       setSuccess("PDF processado para revisao.");
       await loadRecentImports();
     } catch {
@@ -299,7 +315,7 @@ export function ImportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reviewRows.map((row) => (
+                  {paginatedReviewRows.map((row) => (
                     <tr className={row.discarded ? "is-discarded" : undefined} key={row.id}>
                       <td>
                         <Input label="Data" onChange={(event) => updateRow(row.id, { paymentDate: event.target.value })} type="date" value={row.paymentDate} />
@@ -339,6 +355,16 @@ export function ImportsPage() {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              onPageChange={setReviewPage}
+              onPerPageChange={(nextPerPage) => {
+                setReviewPerPage(nextPerPage);
+                setReviewPage(1);
+              }}
+              page={reviewPage}
+              perPage={reviewPerPage}
+              total={reviewRows.length}
+            />
           </section>
         </>
       ) : null}
@@ -367,7 +393,7 @@ export function ImportsPage() {
           </div>
         ) : (
           <div className="imports-history">
-            {recentImports.map((statementImport) => (
+            {paginatedRecentImports.map((statementImport) => (
               <article key={statementImport.id}>
                 <div className="imports-history__main">
                   <strong>{statementImport.fileOriginalName}</strong>
@@ -400,6 +426,16 @@ export function ImportsPage() {
                 </div>
               </article>
             ))}
+            <Pagination
+              onPageChange={setHistoryPage}
+              onPerPageChange={(nextPerPage) => {
+                setHistoryPerPage(nextPerPage);
+                setHistoryPage(1);
+              }}
+              page={historyPage}
+              perPage={historyPerPage}
+              total={recentImports.length}
+            />
           </div>
         )}
       </section>
