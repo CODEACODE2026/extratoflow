@@ -72,17 +72,31 @@ p {
   border-radius: 8px;
   background: #2563eb;
   color: #ffffff;
+  font-size: 15px;
   font-weight: 700;
+  line-height: 1;
 }
 
-.brand strong,
-.brand span {
+.brand-copy {
+  min-width: 0;
+}
+
+.brand-copy strong,
+.brand-copy span {
   display: block;
 }
 
-.brand span {
+.brand-copy strong {
+  color: #111827;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.brand-copy span {
   color: #64748b;
   font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .nav-list {
@@ -654,7 +668,7 @@ h2 {
     padding: 0;
   }
 
-  .brand div,
+  .brand-copy,
   .nav-item span {
     display: none;
   }
@@ -689,7 +703,7 @@ h2 {
     justify-content: flex-start;
   }
 
-  .brand div,
+  .brand-copy,
   .nav-item span {
     display: block;
   }

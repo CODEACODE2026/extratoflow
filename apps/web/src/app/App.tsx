@@ -166,7 +166,7 @@ export function App() {
       <aside className="sidebar" aria-label="Navegacao principal">
         <div className="brand">
           <span className="brand-mark">EF</span>
-          <div>
+          <div className="brand-copy">
             <strong>ExtratoFlow</strong>
             <span>Controle financeiro</span>
           </div>
