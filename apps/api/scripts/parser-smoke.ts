@@ -46,4 +46,22 @@ if (periodHeaderParsed.transactions[0]?.paymentDate !== "2026-06-05") {
   throw new Error("Statement period header changed the transaction month incorrectly.");
 }
 
+const trailingDateParsed = parseStatementText(`
+01/06/2026
+PIX CREDITO DE: PABLO DUARTE MATTOS - 31/05 + R$ 30,00
+PIX CREDITO DE: ELTON RODRIGUES PROE - 30/05 + R$ 30,00
+`);
+
+if (trailingDateParsed.transactions[0]?.paymentDate !== "2026-05-31") {
+  throw new Error("Trailing short date did not override PIX payment date.");
+}
+
+if (trailingDateParsed.transactions[0]?.payerName !== "PABLO DUARTE MATTOS") {
+  throw new Error("Trailing short date was not removed from payer name.");
+}
+
+if (trailingDateParsed.transactions[1]?.paymentDate !== "2026-05-30") {
+  throw new Error("Second trailing short date did not override PIX payment date.");
+}
+
 console.log("Parser smoke test passed.");

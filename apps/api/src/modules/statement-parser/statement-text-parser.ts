@@ -3,6 +3,7 @@ import { TransactionType } from "@prisma/client";
 import type { ParsedStatementTransaction, ParseStatementResult } from "./statement-parser.types";
 
 const DATE_BR_REGEX = /\b(\d{2})\/(\d{2})\/(\d{4})\b/;
+const TRAILING_SHORT_DATE_REGEX = /(?:^|\s)-?\s*(\d{2})\/(\d{2})\s*$/;
 const MONEY_REGEX = /([+-])?\s*(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})\s*([CD])?\b/i;
 const PIX_CREDIT_MARKER = "PIX CREDITO DE";
 
@@ -11,6 +12,37 @@ const toIsoDate = (day: string, month: string, year: string) => `${year}-${month
 const normalizeMoney = (value: string) => value.replace(/\./g, "").replace(",", ".");
 
 const cleanText = (value: string) => value.replace(/\s+/g, " ").trim();
+
+const inferYearForShortDate = (shortMonth: string, referenceDate: string) => {
+  const [referenceYear, referenceMonth] = referenceDate.split("-").map(Number);
+  const month = Number(shortMonth);
+
+  if (referenceMonth === 1 && month === 12) {
+    return String(referenceYear - 1);
+  }
+
+  if (referenceMonth === 12 && month === 1) {
+    return String(referenceYear + 1);
+  }
+
+  return String(referenceYear);
+};
+
+const extractTrailingShortDate = (value: string, referenceDate: string) => {
+  const match = value.match(TRAILING_SHORT_DATE_REGEX);
+
+  if (!match) {
+    return {
+      cleanValue: value,
+      paymentDate: referenceDate
+    };
+  }
+
+  return {
+    cleanValue: cleanText(value.slice(0, match.index).replace(/[-\s]+$/, "")),
+    paymentDate: toIsoDate(match[1], match[2], inferYearForShortDate(match[2], referenceDate))
+  };
+};
 
 const hasTransactionSignal = (line: string) => {
   return line.toUpperCase().includes(PIX_CREDIT_MARKER) || Boolean(extractMoney(line));
@@ -49,12 +81,14 @@ const parsePixCreditLine = (line: string, paymentDate: string): ParsedStatementT
 
   const payerStartIndex = line.toUpperCase().indexOf(PIX_CREDIT_MARKER) + PIX_CREDIT_MARKER.length;
   const payerEndIndex = money?.index && money.index > payerStartIndex ? money.index : line.length;
-  const payerName = cleanText(
+  const payerText = cleanText(
     line
       .slice(payerStartIndex, payerEndIndex)
       .replace(DATE_BR_REGEX, "")
       .replace(/^[:\s-]+/, "")
   );
+  const payerDate = extractTrailingShortDate(payerText, paymentDate);
+  const payerName = payerDate.cleanValue;
   const warnings: string[] = [];
 
   if (!payerName) {
@@ -62,7 +96,7 @@ const parsePixCreditLine = (line: string, paymentDate: string): ParsedStatementT
   }
 
   return {
-    paymentDate,
+    paymentDate: payerDate.paymentDate,
     type: TransactionType.entry,
     payerName: payerName || null,
     descriptionText: null,
