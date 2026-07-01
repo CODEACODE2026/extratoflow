@@ -141,7 +141,7 @@ export const getDashboardSummary = async (filters: SummaryFilters) => {
       refund: decimalToString(refunds.amount),
       pending: decimalToString(pending.amount),
       transmitted: decimalToString(transmitted.amount),
-      balance: decimalToString(entries.amount.plus(refunds.amount).minus(exits.amount))
+      balance: decimalToString(entries.amount.minus(exits.amount).minus(refunds.amount))
     },
     counts: {
       entry: entries.count,
@@ -212,7 +212,7 @@ export const getDashboardMonthly = async (filters: MonthlyFilters) => {
       bucket.counts.transmitted += 1;
     }
 
-    bucket.totals.balance = bucket.totals.entry.plus(bucket.totals.refund).minus(bucket.totals.exit);
+    bucket.totals.balance = bucket.totals.entry.minus(bucket.totals.exit).minus(bucket.totals.refund);
   }
 
   return {

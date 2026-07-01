@@ -318,7 +318,7 @@ h2 {
 }
 
 .metric-card--refund {
-  border-top: 3px solid #2563eb;
+  border-top: 3px solid #dc2626;
 }
 
 .metric-card--pending {
@@ -441,8 +441,8 @@ h2 {
 }
 
 .badge--refund {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .badge--exit,

@@ -220,7 +220,7 @@ export const listTransactions = async (filters: ListTransactionsFilters) => {
       entryAmount: entryAmount.toFixed(2),
       exitAmount: exitAmount.toFixed(2),
       refundAmount: refundAmount.toFixed(2),
-      balanceAmount: entryAmount.plus(refundAmount).minus(exitAmount).toFixed(2),
+      balanceAmount: entryAmount.minus(exitAmount).minus(refundAmount).toFixed(2),
       pendingAmount: pendingAmount.toFixed(2),
       transmittedAmount: transmittedAmount.toFixed(2)
     }

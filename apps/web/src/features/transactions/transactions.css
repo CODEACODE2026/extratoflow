@@ -101,10 +101,6 @@
   color: #b91c1c;
 }
 
-.transaction-amount--refund {
-  color: #1d4ed8;
-}
-
 .transaction-actions {
   display: inline-flex;
   justify-content: flex-end;

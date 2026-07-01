@@ -89,7 +89,7 @@ const transactionAmountClass = (type: TransactionType) => {
     return "transaction-amount transaction-amount--exit";
   }
 
-  return "transaction-amount transaction-amount--refund";
+  return "transaction-amount transaction-amount--exit";
 };
 
 const toEditForm = (transaction: Transaction): EditForm => ({
@@ -322,7 +322,7 @@ export function TransactionsPage() {
               <td>${escapeHtml(transaction.descriptionText ?? "-")}</td>
               <td>${transactionTypeLabel(transaction.type)}</td>
               <td>${escapeHtml(transaction.invoiceNumber ?? "-")}</td>
-              <td class="${transaction.type === "entry" ? "amount-entry" : transaction.type === "exit" ? "amount-exit" : "amount-refund"}">${escapeHtml(formatCurrency(Number(transaction.amount)))}</td>
+              <td class="${transaction.type === "entry" ? "amount-entry" : "amount-exit"}">${escapeHtml(formatCurrency(Number(transaction.amount)))}</td>
             </tr>
           `
         )
@@ -352,7 +352,6 @@ export function TransactionsPage() {
               td:last-child, th:last-child { text-align: right; white-space: nowrap; }
               .amount-entry { color: #047857; font-weight: 700; }
               .amount-exit { color: #b91c1c; font-weight: 700; }
-              .amount-refund { color: #1d4ed8; font-weight: 700; }
               @page { margin: 14mm; }
               @media print { main { padding: 0; } }
             </style>
@@ -572,8 +571,8 @@ export function TransactionsPage() {
         </div>
         <div className="transaction-summary__card">
           <span>Total de devolucoes</span>
-          <strong className="transaction-amount--refund">{formatCurrency(Number(summary.refundAmount))}</strong>
-          <small>Periodo + filtros atuais</small>
+          <strong className="transaction-amount--exit">{formatCurrency(Number(summary.refundAmount))}</strong>
+          <small>Abate do saldo de entrada</small>
         </div>
       </section>
 
