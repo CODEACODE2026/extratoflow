@@ -5,7 +5,7 @@ import type { ParsedStatementTransaction, ParseStatementResult } from "./stateme
 const DATE_BR_REGEX = /\b(\d{2})\/(\d{2})\/(\d{4})\b/;
 const TRAILING_SHORT_DATE_REGEX = /(?:^|\s)-?\s*(\d{2})\/(\d{2})\s*$/;
 const MONEY_REGEX = /([+-])?\s*(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})\s*([CD])?\b/i;
-const PIX_CREDIT_MARKER = "PIX CREDITO DE";
+const PIX_CREDIT_MARKERS = ["PIX CREDITO INTERCOOPERATIVO DE", "PIX CREDITO DE"];
 
 const toIsoDate = (day: string, month: string, year: string) => `${year}-${month}-${day}`;
 
@@ -44,8 +44,14 @@ const extractTrailingShortDate = (value: string, referenceDate: string) => {
   };
 };
 
+const findPixCreditMarker = (line: string) => {
+  const upperLine = line.toUpperCase();
+
+  return PIX_CREDIT_MARKERS.find((marker) => upperLine.includes(marker));
+};
+
 const hasTransactionSignal = (line: string) => {
-  return line.toUpperCase().includes(PIX_CREDIT_MARKER) || Boolean(extractMoney(line));
+  return Boolean(findPixCreditMarker(line)) || Boolean(extractMoney(line));
 };
 
 const isStatementPeriodLine = (line: string) => {
@@ -70,7 +76,9 @@ const extractMoney = (line: string) => {
 };
 
 const parsePixCreditLine = (line: string, paymentDate: string): ParsedStatementTransaction | undefined => {
-  if (!line.toUpperCase().includes(PIX_CREDIT_MARKER)) {
+  const marker = findPixCreditMarker(line);
+
+  if (!marker) {
     return undefined;
   }
 
@@ -79,7 +87,7 @@ const parsePixCreditLine = (line: string, paymentDate: string): ParsedStatementT
     return undefined;
   }
 
-  const payerStartIndex = line.toUpperCase().indexOf(PIX_CREDIT_MARKER) + PIX_CREDIT_MARKER.length;
+  const payerStartIndex = line.toUpperCase().indexOf(marker) + marker.length;
   const payerEndIndex = money?.index && money.index > payerStartIndex ? money.index : line.length;
   const payerText = cleanText(
     line
@@ -134,7 +142,7 @@ const shouldAppendNextLine = (line: string) => {
   }
 
   const upperLine = line.toUpperCase();
-  return !DATE_BR_REGEX.test(line) && !upperLine.includes(PIX_CREDIT_MARKER);
+  return !DATE_BR_REGEX.test(line) && !findPixCreditMarker(upperLine);
 };
 
 export const parseStatementText = (text: string): ParseStatementResult => {
@@ -166,7 +174,7 @@ export const parseStatementText = (text: string): ParseStatementResult => {
       continue;
     }
 
-    if (line.toUpperCase().includes(PIX_CREDIT_MARKER) && !extractMoney(line)) {
+    if (findPixCreditMarker(line) && !extractMoney(line)) {
       const parts = [line];
       let lookahead = index + 1;
 

@@ -64,4 +64,30 @@ if (trailingDateParsed.transactions[1]?.paymentDate !== "2026-05-30") {
   throw new Error("Second trailing short date did not override PIX payment date.");
 }
 
+const intercooperativeParsed = parseStatementText(`
+10/06/2026 PIX CREDITO INTERCOOPERATIVO DE: ROBERTO CARLOS FIGURA + R$ 30,00
+`);
+
+if (
+  intercooperativeParsed.transactions[0]?.type !== "entry" ||
+  intercooperativeParsed.transactions[0]?.payerName !== "ROBERTO CARLOS FIGURA" ||
+  intercooperativeParsed.transactions[0]?.amount !== "30.00"
+) {
+  throw new Error("Intercooperative PIX credit parsing failed.");
+}
+
+const multilineIntercooperativeParsed = parseStatementText(`
+10/06/2026
+PIX CREDITO INTERCOOPERATIVO DE: ROBERTO CARLOS FIGURA
+R$ 30,00
+`);
+
+if (
+  multilineIntercooperativeParsed.transactions[0]?.paymentDate !== "2026-06-10" ||
+  multilineIntercooperativeParsed.transactions[0]?.payerName !== "ROBERTO CARLOS FIGURA" ||
+  multilineIntercooperativeParsed.transactions[0]?.amount !== "30.00"
+) {
+  throw new Error("Multiline intercooperative PIX credit parsing failed.");
+}
+
 console.log("Parser smoke test passed.");
