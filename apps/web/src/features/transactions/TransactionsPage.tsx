@@ -285,7 +285,6 @@ export function TransactionsPage() {
       const filterLabels = [
         `Periodo: ${periodLabel}`,
         filters.type && filters.type !== "all" ? `Tipo: ${filters.type === "entry" ? "Entrada" : "Saida"}` : "Tipo: Todos",
-        filters.status && filters.status !== "all" ? `Status: ${filters.status === "pending" ? "Pendente" : "Transmitido"}` : "Status: Todos",
         filters.payerName?.trim() ? `Pagador: ${filters.payerName.trim()}` : null,
         filters.description?.trim() ? `Descricao: ${filters.description.trim()}` : null
       ].filter(Boolean);
@@ -297,7 +296,6 @@ export function TransactionsPage() {
               <td>${escapeHtml(transaction.payerName ?? "-")}</td>
               <td>${escapeHtml(transaction.descriptionText ?? "-")}</td>
               <td>${transaction.type === "entry" ? "Entrada" : "Saida"}</td>
-              <td>${transaction.status === "pending" ? "Pendente" : "Transmitido"}</td>
               <td>${escapeHtml(transaction.invoiceNumber ?? "-")}</td>
               <td class="${transaction.type === "entry" ? "amount-entry" : "amount-exit"}">${escapeHtml(formatCurrency(Number(transaction.amount)))}</td>
             </tr>
@@ -359,7 +357,6 @@ export function TransactionsPage() {
                     <th>Pagador</th>
                     <th>Descricao</th>
                     <th>Tipo</th>
-                    <th>Status</th>
                     <th>Nota</th>
                     <th>Valor</th>
                   </tr>
