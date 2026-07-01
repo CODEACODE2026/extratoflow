@@ -203,7 +203,11 @@ export function ImportsPage() {
         }))
       );
 
-      setSuccess(`${result.savedTransactions} movimentacoes salvas como pendentes.`);
+      setSuccess(
+        result.skippedDuplicates > 0
+          ? `${result.savedTransactions} movimentacoes salvas. ${result.skippedDuplicates} duplicadas ignoradas.`
+          : `${result.savedTransactions} movimentacoes salvas como pendentes.`
+      );
       setCurrentImport(result.import);
       setReviewRows([]);
       await loadRecentImports();

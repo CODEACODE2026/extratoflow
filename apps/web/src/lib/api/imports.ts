@@ -57,6 +57,7 @@ type GetImportResponse = {
 type ConfirmImportResponse = {
   import: StatementImport;
   savedTransactions: number;
+  skippedDuplicates: number;
 };
 
 export const uploadPdfImport = async (file: File) => {

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { ImportStatus, Prisma, TransactionSource, TransactionStatus, TransactionType } from "@prisma/client";
 
 import { prisma } from "../../database/prisma/client";
@@ -69,6 +71,41 @@ const normalizeOptionalText = (value: string | null | undefined) => {
 
   const normalized = value?.trim();
   return normalized ? normalized : null;
+};
+
+const normalizeDedupText = (value: string | null | undefined) => {
+  return normalizeOptionalText(value)?.replace(/\s+/g, " ").toUpperCase() ?? "";
+};
+
+const toDateKey = (date: Date) => date.toISOString().slice(0, 10);
+
+const buildTransactionKey = (transaction: {
+  paymentDate: Date;
+  type: TransactionType;
+  amount: Prisma.Decimal;
+  payerName: string | null;
+  descriptionText: string | null;
+  rawText: string | null;
+}) => {
+  return [
+    toDateKey(transaction.paymentDate),
+    transaction.type,
+    transaction.amount.toFixed(2),
+    normalizeDedupText(transaction.payerName),
+    normalizeDedupText(transaction.descriptionText),
+    normalizeDedupText(transaction.rawText)
+  ].join("|");
+};
+
+const buildDedupHash = (transaction: {
+  paymentDate: Date;
+  type: TransactionType;
+  amount: Prisma.Decimal;
+  payerName: string | null;
+  descriptionText: string | null;
+  rawText: string | null;
+}) => {
+  return createHash("sha256").update(buildTransactionKey(transaction)).digest("hex");
 };
 
 export const listImports = async () => {
@@ -151,30 +188,64 @@ export const confirmImport = async ({ importId, userId, transactions }: ConfirmI
     throw new AppError("Import already confirmed.", 409, "IMPORT_ALREADY_CONFIRMED");
   }
 
-  const data = transactions.map((transaction) => ({
-    importId,
-    paymentDate: parseDate(transaction.paymentDate),
-    type: parseType(transaction.type),
-    payerName: normalizeOptionalText(transaction.payerName),
-    descriptionText: normalizeOptionalText(transaction.descriptionText),
-    descriptionId: normalizeOptionalText(transaction.descriptionId),
-    amount: parseAmount(transaction.amount),
-    invoiceNumber: null,
-    status: TransactionStatus.pending,
-    source: TransactionSource.pdf_import,
-    rawText: normalizeOptionalText(transaction.rawText)
-  }));
+  const data = transactions.map((transaction) => {
+    const transactionData = {
+      importId,
+      paymentDate: parseDate(transaction.paymentDate),
+      type: parseType(transaction.type),
+      payerName: normalizeOptionalText(transaction.payerName),
+      descriptionText: normalizeOptionalText(transaction.descriptionText),
+      descriptionId: normalizeOptionalText(transaction.descriptionId),
+      amount: parseAmount(transaction.amount),
+      invoiceNumber: null,
+      status: TransactionStatus.pending,
+      source: TransactionSource.pdf_import,
+      rawText: normalizeOptionalText(transaction.rawText)
+    };
+
+    return {
+      ...transactionData,
+      dedupHash: buildDedupHash(transactionData)
+    };
+  });
+
+  const existingTransactions = await prisma.transaction.findMany({
+    where: {
+      source: TransactionSource.pdf_import,
+      OR: data.map((transaction) => ({
+        amount: transaction.amount,
+        descriptionText: transaction.descriptionText,
+        paymentDate: transaction.paymentDate,
+        payerName: transaction.payerName,
+        rawText: transaction.rawText,
+        type: transaction.type
+      }))
+    },
+    select: {
+      amount: true,
+      descriptionText: true,
+      paymentDate: true,
+      payerName: true,
+      rawText: true,
+      type: true
+    }
+  });
+  const existingKeys = new Set(existingTransactions.map(buildTransactionKey));
+  const uniqueData = data.filter((transaction) => !existingKeys.has(buildTransactionKey(transaction)));
+  const skippedDuplicates = data.length - uniqueData.length;
 
   const result = await prisma.$transaction(async (transactionClient) => {
-    await transactionClient.transaction.createMany({
-      data
-    });
+    if (uniqueData.length > 0) {
+      await transactionClient.transaction.createMany({
+        data: uniqueData
+      });
+    }
 
     const updatedImport = await transactionClient.import.update({
       where: { id: importId },
       data: {
         status: ImportStatus.confirmed,
-        totalTransactionsSaved: data.length
+        totalTransactionsSaved: uniqueData.length
       }
     });
 
@@ -185,7 +256,8 @@ export const confirmImport = async ({ importId, userId, transactions }: ConfirmI
         entityId: importId,
         action: "confirm_import",
         summary: {
-          savedTransactions: data.length
+          savedTransactions: uniqueData.length,
+          skippedDuplicates
         }
       }
     });
@@ -195,6 +267,7 @@ export const confirmImport = async ({ importId, userId, transactions }: ConfirmI
 
   return {
     import: presentImport(result),
-    savedTransactions: data.length
+    savedTransactions: uniqueData.length,
+    skippedDuplicates
   };
 };
